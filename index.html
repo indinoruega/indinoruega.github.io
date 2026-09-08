@@ -1,0 +1,3056 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LAURA Plus – Plataforma Kanban Académica</title>
+  <meta name="description" content="LAURA Plus: Gestión colaborativa de proyectos académicos con tablero Kanban" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* ── Fonts (sistema, sin red) ── */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --p400: #818CF8;
+      --p500: #6366F1;
+      --p600: #4F46E5;
+      --p700: #4338CA;
+      --a400: #C084FC;
+      --a500: #A855F7;
+      --a600: #9333EA;
+      --todo: #94A3B8;
+      --todo-bg: rgba(148, 163, 184, .1);
+      --todo-brd: rgba(148, 163, 184, .3);
+      --prog: #F59E0B;
+      --prog-bg: rgba(245, 158, 11, .1);
+      --prog-brd: rgba(245, 158, 11, .4);
+      --done: #10B981;
+      --done-bg: rgba(16, 185, 129, .1);
+      --done-brd: rgba(16, 185, 129, .4);
+      --danger: #EF4444;
+      --danger-bg: rgba(239, 68, 68, .1);
+      --warn: #F59E0B;
+      --warn-bg: rgba(245, 158, 11, .1);
+      --ok: #10B981;
+      --ok-bg: rgba(16, 185, 129, .1);
+      --bg0: #080811;
+      --bg1: #0F0F1E;
+      --bg2: #161628;
+      --bg3: #1A1A2E;
+      --bgh: #1E1E38;
+      --bgi: rgba(255, 255, 255, .05);
+      --t1: #F1F5F9;
+      --t2: #94A3B8;
+      --tm: #64748B;
+      --td: #334155;
+      --b0: rgba(255, 255, 255, .06);
+      --b1: rgba(255, 255, 255, .1);
+      --b2: rgba(255, 255, 255, .2);
+      --bp: rgba(99, 102, 241, .5);
+      --glass: rgba(15, 15, 30, .8);
+      --gbrd: rgba(255, 255, 255, .08);
+      --sh-md: 0 4px 16px rgba(0, 0, 0, .4);
+      --sh-lg: 0 8px 32px rgba(0, 0, 0, .5);
+      --sh-xl: 0 16px 48px rgba(0, 0, 0, .6);
+      --glow: 0 0 20px rgba(99, 102, 241, .4);
+      --tf: 150ms cubic-bezier(.4, 0, .2, 1);
+      --tb: 250ms cubic-bezier(.4, 0, .2, 1);
+      --r-sm: 6px;
+      --r-md: 10px;
+      --r-lg: 16px;
+      --r-xl: 24px;
+      --r-f: 9999px;
+      --sw: 260px;
+      --hh: 64px;
+      --font: 'Segoe UI', system-ui, sans-serif;
+      --mono: 'Consolas', monospace;
+    }
+
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg0);
+      color: var(--t1);
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 50% at 20% 0%, rgba(99, 102, 241, .08) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 100%, rgba(168, 85, 247, .06) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg0)
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--b2);
+      border-radius: var(--r-f)
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--p500)
+    }
+
+    ::selection {
+      background: rgba(99, 102, 241, .3);
+      color: #fff
+    }
+
+    #app {
+      position: relative;
+      z-index: 1
+    }
+
+    /* LOGIN */
+    #login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative
+    }
+
+    #login-screen::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 120% 80% at 50% -20%, rgba(99, 102, 241, .15) 0%, transparent 70%);
+      pointer-events: none
+    }
+
+    .login-card {
+      background: var(--glass);
+      border: 1px solid var(--gbrd);
+      border-radius: var(--r-xl);
+      padding: 44px 38px;
+      backdrop-filter: blur(24px);
+      box-shadow: var(--sh-xl), 0 0 40px rgba(99, 102, 241, .2);
+      width: 100%;
+      max-width: 430px;
+      animation: slideUp .5s ease
+    }
+
+    .login-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+      justify-content: center
+    }
+
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--r-md);
+      background: linear-gradient(135deg, var(--p600), var(--a600));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 900;
+      color: #fff;
+      box-shadow: var(--glow)
+    }
+
+    .brand-name {
+      font-size: 1.75rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--p400), var(--a400));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -.5px
+    }
+
+    .brand-sub {
+      font-size: .7rem;
+      color: var(--tm);
+      font-weight: 600;
+      letter-spacing: .5px;
+      text-transform: uppercase
+    }
+
+    .login-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--t1);
+      text-align: center;
+      margin-bottom: 4px
+    }
+
+    .login-sub {
+      font-size: .875rem;
+      color: var(--t2);
+      text-align: center;
+      margin-bottom: 28px
+    }
+
+    .role-tabs {
+      display: flex;
+      gap: 6px;
+      background: var(--bgi);
+      border-radius: var(--r-md);
+      padding: 4px;
+      margin-bottom: 20px
+    }
+
+    .role-tab {
+      flex: 1;
+      padding: 8px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--tm);
+      font-family: var(--font);
+      font-size: .875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--tf)
+    }
+
+    .role-tab.active {
+      background: linear-gradient(135deg, var(--p600), var(--a600));
+      color: #fff;
+      box-shadow: var(--sh-md)
+    }
+
+    .role-tab:hover:not(.active) {
+      color: var(--t1);
+      background: var(--b0)
+    }
+
+    .form-group {
+      margin-bottom: 18px
+    }
+
+    .form-label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 700;
+      color: var(--t2);
+      margin-bottom: 7px;
+      letter-spacing: .3px
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 11px 15px;
+      background: var(--bgi);
+      border: 1px solid var(--b1);
+      border-radius: var(--r-md);
+      color: var(--t1);
+      font-family: var(--font);
+      font-size: .9375rem;
+      transition: all var(--tf);
+      outline: none
+    }
+
+    .form-control:focus {
+      border-color: var(--p500);
+      background: rgba(99, 102, 241, .05);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, .15)
+    }
+
+    .form-control::placeholder {
+      color: var(--tm)
+    }
+
+    .input-wrap {
+      position: relative
+    }
+
+    .inp-icon {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--tm);
+      font-size: 15px;
+      pointer-events: none
+    }
+
+    .input-wrap .form-control {
+      padding-left: 40px
+    }
+
+    .eye-btn {
+      position: absolute;
+      right: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--tm);
+      cursor: pointer;
+      font-size: 15px;
+      padding: 0;
+      transition: color var(--tf)
+    }
+
+    .eye-btn:hover {
+      color: var(--t1)
+    }
+
+    .hint {
+      font-size: .75rem;
+      color: var(--tm);
+      margin-top: 5px
+    }
+
+    .form-error {
+      font-size: .75rem;
+      color: var(--danger);
+      margin-top: 5px;
+      display: none
+    }
+
+    .form-error.show {
+      display: block
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 10px 20px;
+      border-radius: var(--r-md);
+      border: none;
+      font-family: var(--font);
+      font-size: .9375rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all var(--tf);
+      text-decoration: none;
+      white-space: nowrap
+    }
+
+    .btn:disabled {
+      opacity: .5;
+      cursor: not-allowed
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--p600), var(--a600));
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(99, 102, 241, .3)
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(99, 102, 241, .45)
+    }
+
+    .btn-secondary {
+      background: var(--bgi);
+      color: var(--t1);
+      border: 1px solid var(--b1)
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--bgh);
+      border-color: var(--b2)
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--t2);
+      border: 1px solid transparent
+    }
+
+    .btn-ghost:hover:not(:disabled) {
+      background: var(--bgi);
+      color: var(--t1)
+    }
+
+    .btn-danger {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, .3)
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: rgba(239, 68, 68, .2)
+    }
+
+    .btn-sm {
+      padding: 5px 13px;
+      font-size: .8rem
+    }
+
+    .btn-lg {
+      padding: 13px 26px;
+      font-size: 1rem
+    }
+
+    .btn-full {
+      width: 100%
+    }
+
+    .btn-icon {
+      padding: 8px;
+      border-radius: var(--r-md)
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, .3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: inline-block
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--b0);
+      margin: 18px 0
+    }
+
+    .demo-btn {
+      display: flex;
+      width: 100%;
+      padding: 7px 10px;
+      background: transparent;
+      border: 1px solid var(--b0);
+      border-radius: var(--r-md);
+      color: var(--t2);
+      font-family: var(--font);
+      font-size: .8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--tf);
+      text-align: left;
+      margin-bottom: 5px;
+      align-items: center;
+      gap: 6px
+    }
+
+    .demo-btn:hover {
+      background: var(--bgi);
+      color: var(--t1);
+      border-color: var(--b1)
+    }
+
+    /* MAIN LAYOUT */
+    #main-screen {
+      display: none;
+      min-height: 100vh
+    }
+
+    #main-screen.visible {
+      display: flex
+    }
+
+    .sidebar {
+      width: var(--sw);
+      min-height: 100vh;
+      background: var(--glass);
+      border-right: 1px solid var(--gbrd);
+      backdrop-filter: blur(24px);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 100;
+      transition: transform var(--tb)
+    }
+
+    .sb-header {
+      padding: 22px 18px 18px;
+      border-bottom: 1px solid var(--b0)
+    }
+
+    .sb-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px
+    }
+
+    .sb-logo-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--r-sm);
+      background: linear-gradient(135deg, var(--p600), var(--a600));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 900;
+      color: #fff;
+      flex-shrink: 0;
+      box-shadow: 0 0 10px rgba(99, 102, 241, .4)
+    }
+
+    .sb-brand {
+      font-size: 1.1rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--p400), var(--a400));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -.5px
+    }
+
+    .sb-tagline {
+      font-size: .65rem;
+      color: var(--tm);
+      font-weight: 600
+    }
+
+    .sb-user {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--b0)
+    }
+
+    .user-card {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px;
+      border-radius: var(--r-md);
+      background: var(--bgi)
+    }
+
+    .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--r-f);
+      background: linear-gradient(135deg, var(--p500), var(--a500));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: #fff;
+      flex-shrink: 0
+    }
+
+    .avatar-lg {
+      width: 72px;
+      height: 72px;
+      border-radius: var(--r-f);
+      background: linear-gradient(135deg, var(--p500), var(--a500));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 800;
+      color: #fff;
+      flex-shrink: 0;
+      box-shadow: var(--glow)
+    }
+
+    .user-info {
+      flex: 1;
+      min-width: 0
+    }
+
+    .user-name {
+      font-size: .8rem;
+      font-weight: 700;
+      color: var(--t1);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    .user-role-wrap {
+      margin-top: 3px
+    }
+
+    .rbadge {
+      font-size: .6rem;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: var(--r-f);
+      text-transform: uppercase;
+      letter-spacing: .5px
+    }
+
+    .rbadge.profesor {
+      background: rgba(245, 158, 11, .15);
+      color: var(--warn);
+      border: 1px solid rgba(245, 158, 11, .3)
+    }
+
+    .rbadge.estudiante {
+      background: rgba(99, 102, 241, .15);
+      color: var(--p400);
+      border: 1px solid rgba(99, 102, 241, .3)
+    }
+
+    .sb-nav {
+      flex: 1;
+      padding: 14px 10px;
+      overflow-y: auto
+    }
+
+    .nav-section {
+      margin-bottom: 22px
+    }
+
+    .nav-section-title {
+      font-size: .6rem;
+      font-weight: 800;
+      color: var(--td);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 0 8px;
+      margin-bottom: 6px
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 11px;
+      border-radius: var(--r-md);
+      color: var(--t2);
+      font-size: .875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--tf);
+      border: 1px solid transparent;
+      margin-bottom: 2px;
+      user-select: none
+    }
+
+    .nav-item:hover {
+      background: var(--bgi);
+      color: var(--t1)
+    }
+
+    .nav-item.active {
+      background: rgba(99, 102, 241, .12);
+      color: var(--p400);
+      border-color: rgba(99, 102, 241, .25)
+    }
+
+    .nav-icon {
+      font-size: 17px;
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0
+    }
+
+    .nav-badge {
+      margin-left: auto;
+      background: var(--p600);
+      color: #fff;
+      font-size: .6rem;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: var(--r-f);
+      min-width: 18px;
+      text-align: center
+    }
+
+    .sb-footer {
+      padding: 14px 10px;
+      border-top: 1px solid var(--b0)
+    }
+
+    .main-content {
+      flex: 1;
+      margin-left: var(--sw);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column
+    }
+
+    .topbar {
+      height: var(--hh);
+      background: var(--glass);
+      border-bottom: 1px solid var(--gbrd);
+      backdrop-filter: blur(24px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 26px;
+      position: sticky;
+      top: 0;
+      z-index: 50
+    }
+
+    .topbar-l {
+      display: flex;
+      flex-direction: column
+    }
+
+    .topbar-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--t1);
+      line-height: 1.3
+    }
+
+    .topbar-sub {
+      font-size: .7rem;
+      color: var(--tm)
+    }
+
+    .topbar-r {
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .rt-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--ok);
+      box-shadow: 0 0 6px var(--ok);
+      animation: pulse 2s infinite
+    }
+
+    .rt-ind {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .7rem;
+      color: var(--tm)
+    }
+
+    .page-content {
+      flex: 1;
+      padding: 26px;
+      overflow-y: auto
+    }
+
+    .page {
+      display: none
+    }
+
+    .page.active {
+      display: block
+    }
+
+    /* STATS */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 14px;
+      margin-bottom: 26px
+    }
+
+    .stat-card {
+      background: var(--glass);
+      border: 1px solid var(--gbrd);
+      border-radius: var(--r-lg);
+      padding: 18px 22px;
+      backdrop-filter: blur(16px);
+      transition: all var(--tb);
+      position: relative;
+      overflow: hidden
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      border-radius: var(--r-lg) var(--r-lg) 0 0
+    }
+
+    .stat-card.primary::before {
+      background: linear-gradient(90deg, var(--p500), var(--a500))
+    }
+
+    .stat-card.s-todo::before {
+      background: var(--todo)
+    }
+
+    .stat-card.s-prog::before {
+      background: var(--prog)
+    }
+
+    .stat-card.s-done::before {
+      background: var(--done)
+    }
+
+    .stat-card.s-danger::before {
+      background: var(--danger)
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--b1);
+      box-shadow: var(--sh-lg)
+    }
+
+    .stat-hdr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px
+    }
+
+    .stat-lbl {
+      font-size: .7rem;
+      font-weight: 700;
+      color: var(--tm);
+      text-transform: uppercase;
+      letter-spacing: .5px
+    }
+
+    .stat-ico {
+      font-size: 18px;
+      opacity: .6
+    }
+
+    .stat-val {
+      font-size: 1.9rem;
+      font-weight: 900;
+      color: var(--t1);
+      line-height: 1;
+      margin-bottom: 3px;
+      letter-spacing: -1px
+    }
+
+    .stat-sub {
+      font-size: .7rem;
+      color: var(--tm)
+    }
+
+    .prog-bar {
+      background: var(--b0);
+      border-radius: var(--r-f);
+      height: 5px;
+      overflow: hidden;
+      margin-top: 10px
+    }
+
+    .prog-fill {
+      height: 100%;
+      border-radius: var(--r-f);
+      background: linear-gradient(90deg, var(--p500), var(--a500));
+      transition: width .8s ease
+    }
+
+    .dash-grid {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 22px
+    }
+
+    @media(max-width:1100px) {
+      .dash-grid {
+        grid-template-columns: 1fr
+      }
+    }
+
+    /* PANELS */
+    .panel {
+      background: var(--glass);
+      border: 1px solid var(--gbrd);
+      border-radius: var(--r-lg);
+      backdrop-filter: blur(16px);
+      overflow: hidden
+    }
+
+    .panel-hdr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--b0)
+    }
+
+    .panel-title {
+      font-size: .9375rem;
+      font-weight: 800;
+      color: var(--t1);
+      display: flex;
+      align-items: center;
+      gap: 7px
+    }
+
+    .panel-body {
+      padding: 14px 22px
+    }
+
+    /* KANBAN */
+    .kb-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+      gap: 10px
+    }
+
+    .kb-filters {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap
+    }
+
+    .fsel {
+      padding: 8px 13px;
+      background: var(--bgi);
+      border: 1px solid var(--b1);
+      border-radius: var(--r-md);
+      color: var(--t1);
+      font-family: var(--font);
+      font-size: .8rem;
+      cursor: pointer;
+      transition: border-color var(--tf);
+      outline: none
+    }
+
+    .fsel:focus {
+      border-color: var(--p500)
+    }
+
+    .fsel option {
+      background: var(--bg3);
+      color: var(--t1)
+    }
+
+    .kb-board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      min-height: 560px
+    }
+
+    @media(max-width:860px) {
+      .kb-board {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .kb-col {
+      background: var(--bg1);
+      border: 1px solid var(--b0);
+      border-radius: var(--r-lg);
+      display: flex;
+      flex-direction: column;
+      min-height: 480px;
+      transition: background var(--tf)
+    }
+
+    .kb-col.drag-over {
+      background: rgba(99, 102, 241, .05);
+      border-color: var(--bp)
+    }
+
+    .col-hdr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--b0)
+    }
+
+    .col-title-g {
+      display: flex;
+      align-items: center;
+      gap: 7px
+    }
+
+    .col-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0
+    }
+
+    .col-todo .col-dot {
+      background: var(--todo);
+      box-shadow: 0 0 5px var(--todo)
+    }
+
+    .col-todo {
+      border-top: 3px solid var(--todo)
+    }
+
+    .col-prog .col-dot {
+      background: var(--prog);
+      box-shadow: 0 0 5px var(--prog)
+    }
+
+    .col-prog {
+      border-top: 3px solid var(--prog)
+    }
+
+    .col-done .col-dot {
+      background: var(--done);
+      box-shadow: 0 0 5px var(--done)
+    }
+
+    .col-done {
+      border-top: 3px solid var(--done)
+    }
+
+    .col-title {
+      font-size: .875rem;
+      font-weight: 800;
+      color: var(--t1)
+    }
+
+    .col-count {
+      font-size: .7rem;
+      font-weight: 800;
+      background: var(--bgi);
+      color: var(--tm);
+      padding: 2px 8px;
+      border-radius: var(--r-f);
+      border: 1px solid var(--b0)
+    }
+
+    .col-cards {
+      flex: 1;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      overflow-y: auto;
+      min-height: 100px
+    }
+
+    .col-add {
+      padding: 6px 10px 10px
+    }
+
+    .add-btn {
+      width: 100%;
+      padding: 7px;
+      background: transparent;
+      border: 1px dashed var(--b1);
+      border-radius: var(--r-md);
+      color: var(--tm);
+      font-family: var(--font);
+      font-size: .8rem;
+      cursor: pointer;
+      transition: all var(--tf);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px
+    }
+
+    .add-btn:hover {
+      border-color: var(--p500);
+      color: var(--p400);
+      background: rgba(99, 102, 241, .05)
+    }
+
+    .task-card {
+      background: var(--bg2);
+      border: 1px solid var(--b0);
+      border-radius: var(--r-md);
+      padding: 13px;
+      cursor: grab;
+      transition: all var(--tf);
+      animation: cardIn .25s ease;
+      position: relative;
+      overflow: hidden
+    }
+
+    .task-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      border-radius: 3px 0 0 3px
+    }
+
+    .task-card.s-todo::before {
+      background: var(--todo)
+    }
+
+    .task-card.s-prog::before {
+      background: var(--prog)
+    }
+
+    .task-card.s-done::before {
+      background: var(--done)
+    }
+
+    .task-card:hover {
+      border-color: var(--b1);
+      transform: translateY(-1px);
+      box-shadow: var(--sh-md)
+    }
+
+    .task-card:active {
+      cursor: grabbing
+    }
+
+    .task-card.dragging {
+      opacity: .5;
+      transform: rotate(2deg) scale(1.02);
+      box-shadow: var(--sh-xl);
+      z-index: 1000
+    }
+
+    .task-materia {
+      font-size: .6rem;
+      font-weight: 800;
+      color: var(--p400);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 7px
+    }
+
+    .task-title {
+      font-size: .875rem;
+      font-weight: 700;
+      color: var(--t1);
+      line-height: 1.4;
+      margin-bottom: 7px
+    }
+
+    .task-desc {
+      font-size: .75rem;
+      color: var(--t2);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 10px
+    }
+
+    .task-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 5px
+    }
+
+    .task-assignee {
+      display: flex;
+      align-items: center;
+      gap: 5px
+    }
+
+    .task-av {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--p500), var(--a500));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      font-weight: 800;
+      color: #fff
+    }
+
+    .task-aname {
+      font-size: .65rem;
+      color: var(--t2);
+      font-weight: 600
+    }
+
+    .task-due {
+      font-size: .65rem;
+      color: var(--tm);
+      display: flex;
+      align-items: center;
+      gap: 3px
+    }
+
+    .task-due.venc {
+      color: var(--danger)
+    }
+
+    .task-due.hoy {
+      color: var(--warn)
+    }
+
+    .task-pct {
+      font-size: .6rem;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: var(--r-f);
+      background: rgba(99, 102, 241, .15);
+      color: var(--p400)
+    }
+
+    .task-acts {
+      display: flex;
+      gap: 4px;
+      margin-top: 9px;
+      border-top: 1px solid var(--b0);
+      padding-top: 7px
+    }
+
+    .tact-btn {
+      flex: 1;
+      padding: 4px 7px;
+      background: transparent;
+      border: 1px solid var(--b0);
+      border-radius: var(--r-sm);
+      color: var(--tm);
+      font-family: var(--font);
+      font-size: .65rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--tf);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px
+    }
+
+    .tact-btn:hover {
+      background: var(--bgi);
+      color: var(--t1);
+      border-color: var(--b1)
+    }
+
+    .empty-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 28px 16px;
+      color: var(--tm);
+      font-size: .75rem;
+      gap: 6px;
+      opacity: .6
+    }
+
+    /* MODALS */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .7);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 14px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--tb)
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto
+    }
+
+    .modal {
+      background: var(--bg3);
+      border: 1px solid var(--b1);
+      border-radius: var(--r-xl);
+      width: 100%;
+      max-width: 540px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--sh-xl);
+      transform: scale(.95) translateY(20px);
+      transition: transform var(--tb)
+    }
+
+    .modal-overlay.open .modal {
+      transform: scale(1) translateY(0)
+    }
+
+    .modal-lg {
+      max-width: 700px
+    }
+
+    .modal-hdr {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 22px 26px 18px;
+      border-bottom: 1px solid var(--b0)
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--t1)
+    }
+
+    .modal-sub {
+      font-size: .8rem;
+      color: var(--tm);
+      margin-top: 3px
+    }
+
+    .modal-close {
+      width: 30px;
+      height: 30px;
+      border-radius: var(--r-md);
+      background: var(--bgi);
+      border: none;
+      color: var(--tm);
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--tf);
+      flex-shrink: 0
+    }
+
+    .modal-close:hover {
+      background: var(--danger-bg);
+      color: var(--danger)
+    }
+
+    .modal-body {
+      padding: 22px 26px
+    }
+
+    .modal-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 9px;
+      padding: 18px 26px 22px;
+      border-top: 1px solid var(--b0)
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px
+    }
+
+    @media(max-width:560px) {
+      .form-row {
+        grid-template-columns: 1fr
+      }
+    }
+
+    textarea.form-control {
+      min-height: 85px;
+      resize: vertical
+    }
+
+    select.form-control {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394A3B8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 13px center;
+      padding-right: 34px
+    }
+
+    select.form-control option {
+      background: var(--bg3);
+      color: var(--t1)
+    }
+
+    .form-sect-title {
+      font-size: .75rem;
+      font-weight: 800;
+      color: var(--t2);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 13px;
+      display: flex;
+      align-items: center;
+      gap: 7px
+    }
+
+    .form-sect-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--b0)
+    }
+
+    /* TABLES */
+    .tbl-wrap {
+      overflow-x: auto;
+      border-radius: var(--r-lg);
+      border: 1px solid var(--b0)
+    }
+
+    table.dtbl {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .875rem
+    }
+
+    .dtbl thead {
+      background: var(--bg2)
+    }
+
+    .dtbl th {
+      padding: 11px 15px;
+      text-align: left;
+      font-size: .7rem;
+      font-weight: 800;
+      color: var(--tm);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      border-bottom: 1px solid var(--b0);
+      white-space: nowrap
+    }
+
+    .dtbl td {
+      padding: 11px 15px;
+      border-bottom: 1px solid var(--b0);
+      color: var(--t1);
+      vertical-align: middle
+    }
+
+    .dtbl tbody tr {
+      transition: background var(--tf)
+    }
+
+    .dtbl tbody tr:hover {
+      background: var(--bg2)
+    }
+
+    .dtbl tbody tr:last-child td {
+      border-bottom: none
+    }
+
+    /* STATUS BADGES */
+    .sbadge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: var(--r-f);
+      font-size: .65rem;
+      font-weight: 800;
+      white-space: nowrap
+    }
+
+    .sbadge::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      flex-shrink: 0
+    }
+
+    .sbadge.s-todo {
+      background: var(--todo-bg);
+      color: var(--todo);
+      border: 1px solid var(--todo-brd)
+    }
+
+    .sbadge.s-todo::before {
+      background: var(--todo)
+    }
+
+    .sbadge.s-prog {
+      background: var(--prog-bg);
+      color: var(--prog);
+      border: 1px solid var(--prog-brd)
+    }
+
+    .sbadge.s-prog::before {
+      background: var(--prog);
+      animation: pulse 1.5s infinite
+    }
+
+    .sbadge.s-done {
+      background: var(--done-bg);
+      color: var(--done);
+      border: 1px solid var(--done-brd)
+    }
+
+    .sbadge.s-done::before {
+      background: var(--done)
+    }
+
+    .sbadge.s-noe {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, .3)
+    }
+
+    .sbadge.s-noe::before {
+      background: var(--danger)
+    }
+
+    .sbadge.s-pend {
+      background: var(--prog-bg);
+      color: var(--prog);
+      border: 1px solid var(--prog-brd)
+    }
+
+    .sbadge.s-pend::before {
+      background: var(--prog)
+    }
+
+    .grade-display {
+      font-family: var(--mono);
+      font-size: 1rem;
+      font-weight: 800
+    }
+
+    .g5 {
+      color: #10B981
+    }
+
+    .g4 {
+      color: #6366F1
+    }
+
+    .g3 {
+      color: #F59E0B
+    }
+
+    .glow-g {
+      color: #EF4444
+    }
+
+    .info-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--b0)
+    }
+
+    .info-row:last-child {
+      border-bottom: none
+    }
+
+    .info-row label {
+      font-size: .8rem;
+      color: var(--tm);
+      font-weight: 600
+    }
+
+    .info-row span {
+      font-size: .875rem;
+      color: var(--t1);
+      font-weight: 700
+    }
+
+    /* GROUPS */
+    .groups-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px
+    }
+
+    .group-card {
+      background: var(--glass);
+      border: 1px solid var(--gbrd);
+      border-radius: var(--r-lg);
+      padding: 18px;
+      transition: all var(--tb);
+      cursor: pointer
+    }
+
+    .group-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--b1);
+      box-shadow: var(--sh-lg)
+    }
+
+    .group-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: var(--r-md);
+      background: linear-gradient(135deg, var(--p700), var(--a600));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+      flex-shrink: 0
+    }
+
+    .group-name {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--t1);
+      margin-bottom: 2px
+    }
+
+    .group-desc {
+      font-size: .75rem;
+      color: var(--tm)
+    }
+
+    .grp-stat {
+      font-size: .75rem;
+      color: var(--t2);
+      display: flex;
+      align-items: center;
+      gap: 4px
+    }
+
+    .grp-stat strong {
+      color: var(--t1);
+      font-weight: 800
+    }
+
+    .member-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px
+    }
+
+    .member-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 11px;
+      background: var(--bgi);
+      border-radius: var(--r-md);
+      border: 1px solid var(--b0);
+      transition: all var(--tf)
+    }
+
+    .member-item:hover {
+      border-color: var(--b1)
+    }
+
+    .member-av {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--p500), var(--a500));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      color: #fff;
+      flex-shrink: 0
+    }
+
+    .member-name {
+      font-size: .8rem;
+      font-weight: 700;
+      color: var(--t1)
+    }
+
+    .member-id {
+      font-size: .65rem;
+      color: var(--tm);
+      font-family: var(--mono)
+    }
+
+    .chk-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 11px;
+      background: var(--bgi);
+      border-radius: var(--r-md);
+      border: 1px solid var(--b0);
+      cursor: pointer;
+      transition: all var(--tf)
+    }
+
+    .chk-item:hover {
+      border-color: var(--bp);
+      background: rgba(99, 102, 241, .05)
+    }
+
+    .chk-item input {
+      accent-color: var(--p500);
+      width: 15px;
+      height: 15px;
+      cursor: pointer
+    }
+
+    .chk-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      max-height: 200px;
+      overflow-y: auto
+    }
+
+    /* EVAL */
+    .eval-card {
+      background: var(--glass);
+      border: 1px solid var(--gbrd);
+      border-radius: var(--r-lg);
+      padding: 18px;
+      margin-bottom: 14px;
+      transition: all var(--tf)
+    }
+
+    .eval-card:hover {
+      border-color: var(--b1)
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 5px;
+      border-radius: var(--r-f);
+      background: var(--b0);
+      outline: none;
+      cursor: pointer
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--p500), var(--a500));
+      cursor: pointer;
+      box-shadow: var(--glow);
+      transition: transform var(--tf)
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.2)
+    }
+
+    /* TOASTS */
+    #toast-cont {
+      position: fixed;
+      bottom: 22px;
+      right: 22px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      pointer-events: none
+    }
+
+    .toast {
+      background: var(--bg3);
+      border: 1px solid var(--b1);
+      border-radius: var(--r-lg);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 270px;
+      max-width: 360px;
+      box-shadow: var(--sh-xl);
+      animation: toastIn .35s ease;
+      pointer-events: auto
+    }
+
+    .toast.out {
+      animation: toastOut .3s ease forwards
+    }
+
+    .toast-icon {
+      font-size: 16px;
+      flex-shrink: 0
+    }
+
+    .toast-title {
+      font-size: .875rem;
+      font-weight: 800;
+      color: var(--t1)
+    }
+
+    .toast-msg {
+      font-size: .7rem;
+      color: var(--t2);
+      margin-top: 2px
+    }
+
+    .toast-cls {
+      background: none;
+      border: none;
+      color: var(--tm);
+      cursor: pointer;
+      font-size: 13px;
+      margin-left: auto
+    }
+
+    .toast.ok {
+      border-color: rgba(16, 185, 129, .4)
+    }
+
+    .toast.ok .toast-icon {
+      color: var(--ok)
+    }
+
+    .toast.err {
+      border-color: rgba(239, 68, 68, .4)
+    }
+
+    .toast.err .toast-icon {
+      color: var(--danger)
+    }
+
+    .toast.wrn {
+      border-color: rgba(245, 158, 11, .4)
+    }
+
+    .toast.wrn .toast-icon {
+      color: var(--warn)
+    }
+
+    .toast.inf {
+      border-color: rgba(99, 102, 241, .4)
+    }
+
+    .toast.inf .toast-icon {
+      color: var(--p400)
+    }
+
+    /* PROFILE */
+    .profile-hero {
+      background: linear-gradient(135deg, rgba(79, 70, 229, .1), rgba(147, 51, 234, .1));
+      border: 1px solid var(--b0);
+      border-radius: var(--r-xl);
+      padding: 28px;
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      margin-bottom: 22px
+    }
+
+    .profile-name {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--t1);
+      margin-bottom: 3px
+    }
+
+    .profile-info {
+      font-size: .875rem;
+      color: var(--t2);
+      margin-bottom: 2px
+    }
+
+    /* CALENDAR */
+    .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .cal-title { font-size: 1.2rem; font-weight: 800; color: var(--t1); text-transform: capitalize; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+    .cal-day-name { text-align: center; font-size: .8rem; font-weight: 800; color: var(--tm); text-transform: uppercase; padding-bottom: 10px; border-bottom: 1px solid var(--b0); margin-bottom: 10px; }
+    .cal-cell { background: var(--bg2); border: 1px solid var(--b0); border-radius: var(--r-md); min-height: 100px; padding: 8px; display: flex; flex-direction: column; gap: 5px; transition: all var(--tf); }
+    .cal-cell:hover { border-color: var(--b1); background: var(--bg3); }
+    .cal-cell.empty { background: transparent; border-color: transparent; }
+    .cal-cell.today { border-color: var(--p500); background: rgba(99, 102, 241, .05); box-shadow: 0 0 0 1px var(--p500); }
+    .cal-date { font-size: .8rem; font-weight: 700; color: var(--t2); align-self: flex-end; margin-bottom: 5px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+    .cal-cell.today .cal-date { background: var(--p500); color: #fff; }
+    .cal-task { font-size: .7rem; padding: 4px 6px; border-radius: var(--r-sm); background: var(--bgi); border: 1px solid var(--b0); color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; transition: all var(--tf); }
+    .cal-task:hover { filter: brightness(1.2); transform: translateX(2px); }
+    .cal-task.s-todo { border-left: 3px solid var(--todo); }
+    .cal-task.s-prog { border-left: 3px solid var(--prog); }
+    .cal-task.s-done { border-left: 3px solid var(--done); }
+
+    /* EMPTY */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 44px 22px;
+      text-align: center
+    }
+
+    .empty-ico {
+      font-size: 42px;
+      margin-bottom: 13px;
+      opacity: .3
+    }
+
+    .empty-title {
+      font-size: .95rem;
+      font-weight: 800;
+      color: var(--t2);
+      margin-bottom: 7px
+    }
+
+    .empty-desc {
+      font-size: .8rem;
+      color: var(--tm);
+      max-width: 240px;
+      line-height: 1.6;
+      margin-bottom: 18px
+    }
+
+    /* UTILS */
+    .hidden {
+      display: none !important
+    }
+
+    .mt16 {
+      margin-top: 16px
+    }
+
+    .mb16 {
+      margin-bottom: 16px
+    }
+
+    .mt24 {
+      margin-top: 24px
+    }
+
+    .gap8 {
+      gap: 8px
+    }
+
+    .flex {
+      display: flex
+    }
+
+    .flex-center {
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .text-muted {
+      color: var(--tm)
+    }
+
+    .text-danger {
+      color: var(--danger)
+    }
+
+    .text-ok {
+      color: var(--ok)
+    }
+
+    /* ANIMATIONS */
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(24px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    @keyframes cardIn {
+      from {
+        opacity: 0;
+        transform: scale(.96)
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1)
+      }
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .4
+      }
+    }
+
+    @keyframes toastIn {
+      from {
+        opacity: 0;
+        transform: translateX(100%) scale(.9)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0) scale(1)
+      }
+    }
+
+    @keyframes toastOut {
+      from {
+        opacity: 1;
+        transform: translateX(0)
+      }
+
+      to {
+        opacity: 0;
+        transform: translateX(100%)
+      }
+    }
+
+    /* RESPONSIVE */
+    @media(max-width:768px) {
+      .sidebar {
+        transform: translateX(-100%)
+      }
+
+      .sidebar.open {
+        transform: translateX(0)
+      }
+
+      .main-content {
+        margin-left: 0
+      }
+
+      .page-content {
+        padding: 14px
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr)
+      }
+
+      #menu-toggle {
+        display: flex !important
+      }
+    }
+
+    @media(max-width:480px) {
+      .stats-grid {
+        grid-template-columns: 1fr
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <!-- LOGIN -->
+    <div id="login-screen"></div>
+    <!-- MAIN -->
+    <div id="main-screen">
+      <aside class="sidebar" id="sidebar" aria-label="Navegación"></aside>
+      <div class="main-content">
+        <header class="topbar">
+          <div class="topbar-l">
+            <div class="topbar-title" id="topbar-title">LAURA Plus</div>
+            <div class="topbar-sub" id="topbar-sub">Plataforma Kanban Académica</div>
+          </div>
+          <div class="topbar-r">
+            <div class="rt-ind">
+              <div class="rt-dot"></div><span>En tiempo real</span>
+            </div>
+            <button class="btn btn-icon btn-ghost" id="menu-toggle" onclick="toggleSidebar()" style="display:none"
+              aria-label="Menú">☰</button>
+          </div>
+        </header>
+        <main class="page-content">
+          <section class="page" id="dashboard-page"></section>
+          <section class="page" id="calendar-page"></section>
+          <section class="page" id="kanban-page"></section>
+          <section class="page" id="groups-page"></section>
+          <section class="page" id="eval-page"></section>
+          <section class="page" id="profile-page"></section>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div id="toast-cont"></div>
+
+  <script>
+    // ═══════════════════════════════════════════════════
+    // DATA.JS – Modelo de datos y localStorage
+    // ═══════════════════════════════════════════════════
+    const DB_KEY = 'lauraplus_v2';
+    const SEED = {
+      profesores: [
+        { codigo_profesor: 1, cedula: '12345678', nombres: 'Leonardo', apellidos: 'Martínez Fontalvo', telefono: '3001234567', correo: 'lmartinez@sena.edu.co', password: 'profe123', tipo: 'profesor' },
+        { codigo_profesor: 2, cedula: '87654321', nombres: 'Angélica', apellidos: 'Meza Ochoa', telefono: '3009876543', correo: 'ameza@sena.edu.co', password: 'coord123', tipo: 'profesor' }
+      ],
+      estudiantes: [
+        { tarjeta_identidad: '1195213000', nombres: 'Miguel Ángel', apellidos: 'Restrepo Giraldo', fecha_nacimiento: '2006-05-14', telefono: '3012590936', correo: 'samyfiorini503@gmail.com', password: 'miguel123', codigo_grupo: 1, tipo: 'estudiante' },
+        { tarjeta_identidad: '1020304670', nombres: 'Laura', apellidos: 'Montoya Parra', fecha_nacimiento: '2006-09-22', telefono: '3218189194', correo: 'montoyaparralaura97@gmail.com', password: 'laura123', codigo_grupo: 1, tipo: 'estudiante' },
+        { tarjeta_identidad: '1015075367', nombres: 'Matías', apellidos: 'Hincapié Cardona', fecha_nacimiento: '2007-01-10', telefono: '3013350129', correo: 'matihinca2010@gmail.com', password: 'matias123', codigo_grupo: 1, tipo: 'estudiante' },
+        { tarjeta_identidad: '1030405060', nombres: 'Sofía', apellidos: 'García López', fecha_nacimiento: '2006-11-05', telefono: '3005551234', correo: 'sofia.garcia@edu.co', password: 'sofia123', codigo_grupo: 2, tipo: 'estudiante' }
+      ],
+      grupos: [
+        { codigo_grupo: 1, grado: '10°', nombre: 'Ficha 319 – ADSO', descripcion: 'Técnica en Análisis y Desarrollo de Software', codigo_profesor: 1 },
+        { codigo_grupo: 2, grado: '11°', nombre: 'Ficha 320 – Redes', descripcion: 'Instalación y Mantenimiento de Redes', codigo_profesor: 1 }
+      ],
+      materias: [
+        { codigo_materia: 1, nombre: 'Diseño de Software', area: 'Tecnología', descripcion: 'Fundamentos de diseño y arquitectura', periodo: 1, logro: 'Comprende principios de diseño y patrones básicos' },
+        { codigo_materia: 2, nombre: 'Bases de Datos', area: 'Tecnología', descripcion: 'Modelado, diseño e implementación de BD', periodo: 1, logro: 'Diseña y normaliza modelos de datos' },
+        { codigo_materia: 3, nombre: 'Desarrollo Web', area: 'Tecnología', descripcion: 'Desarrollo front-end y back-end', periodo: 2, logro: 'Implementa aplicaciones web funcionales' }
+      ],
+      asignaciones: [
+        { codigo_asignacion: 1, codigo_grupo: 1, codigo_materia: 1, codigo_profesor: 1, anio: 2026, periodo: '2026-A' },
+        { codigo_asignacion: 2, codigo_grupo: 1, codigo_materia: 2, codigo_profesor: 1, anio: 2026, periodo: '2026-A' },
+        { codigo_asignacion: 3, codigo_grupo: 1, codigo_materia: 3, codigo_profesor: 1, anio: 2026, periodo: '2026-A' }
+      ],
+      equipos: [
+        { codigo_equipo: 1, nombre: 'Equipo Alpha', descripcion: 'Equipo de desarrollo del proyecto LAURA Plus', codigo_grupo: 1, codigo_materia: 3, codigo_profesor: 1, integrantes: ['1195213000', '1020304670', '1015075367'], fecha_creacion: '2026-08-01' }
+      ],
+      tareas: [
+        { codigo_tarea: 1, titulo: 'Diseño del Diagrama MER', descripcion: 'Crear el Modelo Entidad-Relación del sistema LAURA Plus con todas las entidades, relaciones y cardinalidades.', fecha_inicio: '2026-08-01', fecha_entrega: '2026-09-15', valor_porcentaje: 20, logro: 'Diseña modelos de datos normalizados', estado: 'hecho', codigo_materia: 2, codigo_equipo: 1, responsable: '1195213000', creado_por: 1, creado_tipo: 'profesor', fecha_creacion: '2026-08-01T08:00:00Z' },
+        { codigo_tarea: 2, titulo: 'Maquetación HTML/CSS del Tablero', descripcion: 'Desarrollar la estructura HTML y estilos CSS del tablero Kanban con las tres columnas.', fecha_inicio: '2026-08-10', fecha_entrega: '2026-09-20', valor_porcentaje: 25, logro: 'Implementa interfaces web responsivas', estado: 'en_proceso', codigo_materia: 3, codigo_equipo: 1, responsable: '1020304670', creado_por: 1, creado_tipo: 'profesor', fecha_creacion: '2026-08-10T09:00:00Z' },
+        { codigo_tarea: 3, titulo: 'Lógica de Drag and Drop', descripcion: 'Implementar la funcionalidad de arrastrar y soltar para mover tarjetas entre columnas del tablero.', fecha_inicio: '2026-08-15', fecha_entrega: '2026-09-25', valor_porcentaje: 30, logro: 'Aplica técnicas de interacción avanzada en JavaScript', estado: 'en_proceso', codigo_materia: 3, codigo_equipo: 1, responsable: '1015075367', creado_por: 1, creado_tipo: 'profesor', fecha_creacion: '2026-08-15T10:00:00Z' },
+        { codigo_tarea: 4, titulo: 'Especificación RF/RNF', descripcion: 'Documentar los requisitos funcionales y no funcionales del sistema según el formato SENA.', fecha_inicio: '2026-07-20', fecha_entrega: '2026-08-30', valor_porcentaje: 15, logro: 'Elabora documentación técnica según estándares', estado: 'hecho', codigo_materia: 1, codigo_equipo: 1, responsable: '1020304670', creado_por: 1, creado_tipo: 'profesor', fecha_creacion: '2026-07-20T08:00:00Z' },
+        { codigo_tarea: 5, titulo: 'Módulo de Autenticación', descripcion: 'Desarrollar el login con validación de credenciales, gestión de roles y control de acceso.', fecha_inicio: '2026-09-01', fecha_entrega: '2026-10-01', valor_porcentaje: 20, logro: 'Implementa mecanismos de seguridad y autenticación', estado: 'por_hacer', codigo_materia: 3, codigo_equipo: 1, responsable: '1195213000', creado_por: 1, creado_tipo: 'profesor', fecha_creacion: '2026-09-01T08:00:00Z' },
+        { codigo_tarea: 6, titulo: 'Pruebas de Usabilidad', descripcion: 'Realizar pruebas con usuarios reales del contexto educativo para evaluar usabilidad y eficiencia.', fecha_inicio: '2026-09-15', fecha_entrega: '2026-10-15', valor_porcentaje: 10, logro: 'Evalúa calidad de la interfaz con usuarios', estado: 'por_hacer', codigo_materia: 1, codigo_equipo: 1, responsable: null, creado_por: 1, creado_tipo: 'profesor', fecha_creacion: '2026-09-01T10:00:00Z' }
+      ],
+      entregas: [
+        { codigo_entrega: 1, codigo_tarea: 1, tarjeta_identidad: '1195213000', descripcion: 'MER completo con 9 entidades, normalizado hasta 3FN. Incluye diagrama físico con tipos de datos y claves foráneas.', archivo_nombre: 'MER_LAURA_Plus_v2.pdf', fecha_entrega: '2026-09-08T10:30:00Z', tardio: false, calificacion: 4.8, observaciones: 'Excelente trabajo. El diagrama está bien normalizado y los tipos de datos son correctos.', evaluado_por: 1, fecha_evaluacion: '2026-09-08T14:00:00Z' },
+        { codigo_entrega: 2, codigo_tarea: 4, tarjeta_identidad: '1020304670', descripcion: 'Documento RF/RNF versión corregida con eliminación del CU05 y separación del MER.', archivo_nombre: 'RF_RNF_CORREGIDOS.docx', fecha_entrega: '2026-08-29T16:45:00Z', tardio: false, calificacion: 4.5, observaciones: 'Buena corrección. Los RF están bien separados del modelo de datos.', evaluado_por: 1, fecha_evaluacion: '2026-09-01T09:00:00Z' }
+      ],
+      sesion: null,
+      ids: { tarea: 6, entrega: 2, equipo: 1, grupo: 2 }
+    };
+
+    const SUPABASE_URL = 'https://onkdeotanojxsxbjwcin.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ua2Rlb3Rhbm9qeHN4Ymp3Y2luIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4OTg4NTEsImV4cCI6MjEwNDQ3NDg1MX0.FnZ8ioc06dO8joXaWyRTf8NNhUURcLa7b0H8m-WCfhw';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const DB = {
+      async syncFromSupabase() {
+        try {
+          const { data: tareas } = await supabaseClient.from('tareas').select('*');
+          const { data: entregas } = await supabaseClient.from('entregas').select('*');
+          const { data: grupos } = await supabaseClient.from('grupos').select('*');
+          const { data: equipos } = await supabaseClient.from('equipos').select('*');
+          const { data: usuarios } = await supabaseClient.from('usuarios').select('*');
+          if (tareas && entregas) {
+            const db = this.get();
+            if (tareas.length > 0) db.tareas = tareas;
+            if (entregas.length > 0) db.entregas = entregas;
+            if (grupos && grupos.length > 0) db.grupos = grupos;
+            if (equipos && equipos.length > 0) db.equipos = equipos;
+            if (usuarios && usuarios.length > 0) {
+              db.estudiantes = usuarios.filter(u => u.tipo === 'estudiante').map(u => ({ tarjeta_identidad: u.documento, nombres: u.nombres, apellidos: u.apellidos, correo: u.correo, password: u.password, telefono: u.telefono, tipo: 'estudiante', codigo_grupo: u.codigo_grupo }));
+              db.profesores = usuarios.filter(u => u.tipo === 'profesor').map(u => ({ codigo_profesor: u.id, cedula: u.documento, nombres: u.nombres, apellidos: u.apellidos, correo: u.correo, password: u.password, telefono: u.telefono, tipo: 'profesor' }));
+            }
+            this.save(db);
+            console.log('Sincronizado con Supabase');
+          }
+        } catch(e) { console.error('Error sincronizando con Supabase', e) }
+      },
+      init() { 
+        if (!localStorage.getItem(DB_KEY)) localStorage.setItem(DB_KEY, JSON.stringify(SEED));
+        this.syncFromSupabase();
+      },
+      get() { return JSON.parse(localStorage.getItem(DB_KEY)) || SEED },
+      save(d) { localStorage.setItem(DB_KEY, JSON.stringify(d)) },
+      reset() { localStorage.setItem(DB_KEY, JSON.stringify(SEED)); location.reload() },
+      findUser(correo, pass) {
+        const db = this.get();
+        const p = db.profesores.find(x => x.correo === correo && x.password === pass);
+        if (p) return p;
+        return db.estudiantes.find(x => x.correo === correo && x.password === pass) || null;
+      },
+      getSession() { return this.get().sesion },
+      setSession(u) { const db = this.get(); db.sesion = u; this.save(db) },
+      clearSession() { const db = this.get(); db.sesion = null; this.save(db) },
+      getTareas(f = {}) {
+        let t = this.get().tareas;
+        if (f.estado) t = t.filter(x => x.estado === f.estado);
+        if (f.codigo_equipo) t = t.filter(x => x.codigo_equipo === f.codigo_equipo);
+        if (f.codigo_materia) t = t.filter(x => x.codigo_materia === f.codigo_materia);
+        if (f.responsable) t = t.filter(x => x.responsable === f.responsable);
+        return t;
+      },
+      getTareaById(id) { return this.get().tareas.find(t => t.codigo_tarea === id) },
+      crearTarea(d) {
+        const db = this.get(); db.ids.tarea++;
+        const t = { ...d, codigo_tarea: db.ids.tarea, estado: 'por_hacer', fecha_creacion: new Date().toISOString() };
+        db.tareas.push(t); this.save(db);
+        supabaseClient.from('tareas').insert([{ ...t }]).then(({error}) => { if(error) console.error('Supabase error:', error) });
+        return t;
+      },
+      actualizarTarea(id, d) {
+        const db = this.get(); const i = db.tareas.findIndex(t => t.codigo_tarea === id);
+        if (i < 0) return null; db.tareas[i] = { ...db.tareas[i], ...d }; this.save(db);
+        supabaseClient.from('tareas').update(d).eq('codigo_tarea', id).then(({error}) => { if(error) console.error('Supabase error:', error) });
+        return db.tareas[i];
+      },
+      eliminarTarea(id) { const db = this.get(); db.tareas = db.tareas.filter(t => t.codigo_tarea !== id); this.save(db); supabaseClient.from('tareas').delete().eq('codigo_tarea', id).then(); },
+      cambiarEstado(id, est) { return this.actualizarTarea(id, { estado: est }) },
+      getEntregas(f = {}) {
+        let e = this.get().entregas;
+        if (f.codigo_tarea) e = e.filter(x => x.codigo_tarea === f.codigo_tarea);
+        if (f.tarjeta_identidad) e = e.filter(x => x.tarjeta_identidad === f.tarjeta_identidad);
+        return e;
+      },
+      registrarEntrega(d) {
+        const db = this.get(); db.ids.entrega++;
+        const e = { ...d, codigo_entrega: db.ids.entrega, calificacion: null, observaciones: null, evaluado_por: null, fecha_evaluacion: null };
+        db.entregas.push(e); this.save(db);
+        supabaseClient.from('entregas').insert([e]).then(({error}) => { if(error) console.error('Supabase error:', error) });
+        return e;
+      },
+      evaluarEntrega(id, nota, obs, profId) {
+        const db = this.get(); const i = db.entregas.findIndex(e => e.codigo_entrega === id);
+        if (i < 0) return null;
+        db.entregas[i] = { ...db.entregas[i], calificacion: nota, observaciones: obs, evaluado_por: profId, fecha_evaluacion: new Date().toISOString() };
+        this.save(db);
+        supabaseClient.from('entregas').update({ calificacion: nota, observaciones: obs, evaluado_por: profId, fecha_evaluacion: db.entregas[i].fecha_evaluacion }).eq('codigo_entrega', id).then();
+        return db.entregas[i];
+      },
+      getGrupos() { return this.get().grupos },
+      getGrupoById(id) { return this.get().grupos.find(g => g.codigo_grupo === id) },
+      crearGrupo(d) { const db = this.get(); db.ids.grupo++; const g = { ...d, codigo_grupo: db.ids.grupo }; db.grupos.push(g); this.save(db); supabaseClient.from('grupos').insert([g]).then(); return g },
+      getEstudiantesByGrupo(gid) { return this.get().estudiantes.filter(e => e.codigo_grupo === gid) },
+      getEquipos(f = {}) { let e = this.get().equipos; if (f.codigo_grupo) e = e.filter(x => x.codigo_grupo === f.codigo_grupo); return e },
+      crearEquipo(d) { const db = this.get(); db.ids.equipo++; const e = { ...d, codigo_equipo: db.ids.equipo, fecha_creacion: new Date().toISOString().split('T')[0] }; db.equipos.push(e); this.save(db); supabaseClient.from('equipos').insert([e]).then(); return e },
+      getMaterias() { return this.get().materias },
+      getEstudiantes() { return this.get().estudiantes },
+      getEstudianteById(id) { return this.get().estudiantes.find(e => e.tarjeta_identidad === id) },
+      getProfesores() { return this.get().profesores },
+      getProfesorById(id) { return this.get().profesores.find(p => p.codigo_profesor === id) },
+      getAsignaciones(f = {}) { let a = this.get().asignaciones; if (f.codigo_grupo) a = a.filter(x => x.codigo_grupo === f.codigo_grupo); return a },
+      getStats() {
+        const t = this.get().tareas; const total = t.length;
+        const ph = t.filter(x => x.estado === 'por_hacer').length;
+        const ep = t.filter(x => x.estado === 'en_proceso').length;
+        const he = t.filter(x => x.estado === 'hecho').length;
+        const prog = total > 0 ? Math.round((he / total) * 100) : 0;
+        const venc = t.filter(x => x.estado !== 'hecho' && new Date(x.fecha_entrega) < new Date()).length;
+        return { total, por_hacer: ph, en_proceso: ep, hecho: he, progreso: prog, vencidas: venc };
+      }
+    };
+
+    // ═══════════════════════════════════════════════════
+    // UTILS
+    // ═══════════════════════════════════════════════════
+    function esc(s) { if (!s) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') }
+    function fdate(iso) { if (!iso) return '-'; const d = new Date(iso + 'T00:00:00'); return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) }
+    function fdatetime(iso) { if (!iso) return '-'; return new Date(iso).toLocaleString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }
+    function fdateShort(iso) { if (!iso) return '-'; return new Date(iso + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }) }
+    function today() { return new Date().toISOString().split('T')[0] }
+    function gClass(n) { return n >= 4.5 ? 'g5' : n >= 4 ? 'g4' : n >= 3 ? 'g3' : 'glow-g' }
+    function estadoLabel(e) { return { por_hacer: 'Por hacer', en_proceso: 'En proceso', hecho: 'Hecho' }[e] || e }
+    function estadoClass(e) { return { por_hacer: 's-todo', en_proceso: 's-prog', hecho: 's-done' }[e] || '' }
+    function initials(nombres, apellidos) { return ((nombres || '')[0] + (apellidos || '')[0]).toUpperCase() }
+
+    // ═══════════════════════════════════════════════════
+    // TOASTS
+    // ═══════════════════════════════════════════════════
+    function showToast(title, msg, type = 'inf', dur = 4000) {
+      const icons = { ok: '✅', err: '❌', wrn: '⚠️', inf: 'ℹ️' };
+      const t = document.createElement('div');
+      t.className = `toast ${type}`;
+      t.innerHTML = `<span class="toast-icon">${icons[type] || 'ℹ️'}</span><div><div class="toast-title">${esc(title)}</div>${msg ? `<div class="toast-msg">${esc(msg)}</div>` : ''}</div><button class="toast-cls" onclick="this.closest('.toast').remove()">✕</button>`;
+      document.getElementById('toast-cont').appendChild(t);
+      setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300) }, dur);
+    }
+
+    // ═══════════════════════════════════════════════════
+    // MODALS
+    // ═══════════════════════════════════════════════════
+    function openModal(id, title, sub, body, footer, extraClass = '') {
+      const ex = document.getElementById('ov-' + id); if (ex) ex.remove();
+      const ov = document.createElement('div');
+      ov.className = 'modal-overlay'; ov.id = 'ov-' + id;
+      ov.innerHTML = `<div class="modal ${extraClass}" id="m-${id}" role="dialog"><div class="modal-hdr"><div><div class="modal-title">${title}</div>${sub ? `<div class="modal-sub">${sub}</div>` : ''}</div><button class="modal-close" onclick="closeModal('${id}')">✕</button></div><div class="modal-body">${body}</div>${footer ? `<div class="modal-footer">${footer}</div>` : ''}</div>`;
+      ov.addEventListener('click', e => { if (e.target === ov) closeModal(id) });
+      document.body.appendChild(ov); setTimeout(() => ov.classList.add('open'), 10);
+      const fi = ov.querySelector('input,select,textarea,button:not(.modal-close)'); if (fi) fi.focus();
+    }
+    function closeModal(id) { const ov = document.getElementById('ov-' + id); if (!ov) return; ov.classList.remove('open'); setTimeout(() => ov.remove(), 300) }
+
+    // ═══════════════════════════════════════════════════
+    // AUTH
+    // ═══════════════════════════════════════════════════
+    let currentUser = null;
+    function isProf() { return currentUser && currentUser.tipo === 'profesor' }
+    function isEst() { return currentUser && currentUser.tipo === 'estudiante' }
+
+    function renderLogin() {
+      const el = document.getElementById('login-screen');
+      el.innerHTML = `
+  <div style="width:100%;max-width:430px;position:relative">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="logo-icon">L+</div>
+        <div><div class="brand-name">LAURA Plus</div><div class="brand-sub">Plataforma Kanban Académica</div></div>
+      </div>
+      <!-- Tabs Login / Registro -->
+      <div class="role-tabs" style="margin-bottom:20px">
+        <button class="role-tab active" id="auth-tab-login" onclick="showAuthTab('login')">🔑 Iniciar sesión</button>
+        <button class="role-tab" id="auth-tab-reg" onclick="showAuthTab('reg')">✨ Crear cuenta</button>
+      </div>
+
+      <!-- PANEL LOGIN -->
+      <div id="auth-login">
+        <p class="login-title">Bienvenido de vuelta</p>
+        <p class="login-sub" style="margin-bottom:20px">Ingresa tus credenciales para continuar</p>
+        <form onsubmit="doLogin(event)">
+          <div class="form-group">
+            <label class="form-label">Correo electrónico</label>
+            <div class="input-wrap"><span class="inp-icon">📧</span><input type="email" id="l-email" class="form-control" placeholder="tu@correo.edu.co" required autocomplete="email"/></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Contraseña</label>
+            <div class="input-wrap"><span class="inp-icon">🔒</span><input type="password" id="l-pass" class="form-control" placeholder="Tu contraseña" required/><button type="button" class="eye-btn" onclick="toggleEye('l-pass','eye-btn')" id="eye-btn">👁</button></div>
+          </div>
+          <div class="form-error" id="l-err"></div>
+          <button type="submit" class="btn btn-primary btn-full btn-lg" id="l-btn"><span id="l-btn-t">Iniciar sesión</span></button>
+        </form>
+        <p style="text-align:center;font-size:.8rem;color:var(--tm);margin-top:14px">¿No tienes cuenta? <button onclick="showAuthTab('reg')" style="background:none;border:none;color:var(--p400);cursor:pointer;font-weight:700;font-size:.8rem">Regístrate aquí →</button></p>
+      </div>
+
+      <!-- PANEL REGISTRO -->
+      <div id="auth-reg" style="display:none">
+        <p class="login-title">Crear cuenta</p>
+        <p class="login-sub" style="margin-bottom:18px">Completa tus datos para registrarte</p>
+        <!-- Rol selector -->
+        <div style="margin-bottom:16px">
+          <label class="form-label">Tipo de cuenta</label>
+          <div class="role-tabs" style="margin-top:7px">
+            <button type="button" class="role-tab active" id="reg-tab-est" onclick="setRegRol('estudiante')">🎓 Estudiante</button>
+            <button type="button" class="role-tab" id="reg-tab-prof" onclick="setRegRol('profesor')">👨‍🏫 Profesor</button>
+          </div>
+        </div>
+        <form onsubmit="doRegister(event)">
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Nombres *</label><input type="text" id="r-nom" class="form-control" placeholder="Ej: Laura" required/></div>
+            <div class="form-group"><label class="form-label">Apellidos *</label><input type="text" id="r-ape" class="form-control" placeholder="Ej: García" required/></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" id="r-id-label">Tarjeta de Identidad *</label>
+            <input type="text" id="r-id" class="form-control" placeholder="Número de documento" required maxlength="20"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Correo electrónico *</label>
+            <div class="input-wrap"><span class="inp-icon">📧</span><input type="email" id="r-email" class="form-control" placeholder="tu@correo.edu.co" required/></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Teléfono</label>
+            <div class="input-wrap"><span class="inp-icon">📱</span><input type="tel" id="r-tel" class="form-control" placeholder="Ej: 3001234567"/></div>
+          </div>
+          <!-- Campo solo estudiante: grupo -->
+          <div class="form-group" id="r-grupo-wrap">
+            <label class="form-label">Grupo</label>
+            <select id="r-grupo" class="form-control"><option value="">Seleccionar grupo...</option></select>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Contraseña *</label><div class="input-wrap"><span class="inp-icon">🔒</span><input type="password" id="r-pass" class="form-control" placeholder="Mínimo 6 caracteres" required minlength="6"/><button type="button" class="eye-btn" onclick="toggleEye('r-pass','r-eye')" id="r-eye">👁</button></div></div>
+            <div class="form-group"><label class="form-label">Confirmar *</label><div class="input-wrap"><span class="inp-icon">🔒</span><input type="password" id="r-pass2" class="form-control" placeholder="Repite la contraseña" required/></div></div>
+          </div>
+          <div class="form-error" id="r-err"></div>
+          <button type="submit" class="btn btn-primary btn-full btn-lg" id="r-btn"><span id="r-btn-t">✨ Crear cuenta</span></button>
+        </form>
+        <p style="text-align:center;font-size:.8rem;color:var(--tm);margin-top:14px">¿Ya tienes cuenta? <button onclick="showAuthTab('login')" style="background:none;border:none;color:var(--p400);cursor:pointer;font-weight:700;font-size:.8rem">Inicia sesión →</button></p>
+      </div>
+    </div>
+  </div>`;
+      // Llenar grupos en el selector de registro
+      const grupos = DB.getGrupos();
+      const sel = document.getElementById('r-grupo');
+      if (sel) grupos.forEach(g => { const o = document.createElement('option'); o.value = g.codigo_grupo; o.textContent = g.nombre + ' (' + g.grado + ')'; sel.appendChild(o) });
+    }
+
+    function showAuthTab(tab) {
+      const isLogin = tab === 'login';
+      document.getElementById('auth-login').style.display = isLogin ? 'block' : 'none';
+      document.getElementById('auth-reg').style.display = isLogin ? 'none' : 'block';
+      document.getElementById('auth-tab-login').classList.toggle('active', isLogin);
+      document.getElementById('auth-tab-reg').classList.toggle('active', !isLogin);
+    }
+
+    let regRol = 'estudiante';
+    function setRegRol(r) {
+      regRol = r;
+      document.getElementById('reg-tab-est').classList.toggle('active', r === 'estudiante');
+      document.getElementById('reg-tab-prof').classList.toggle('active', r === 'profesor');
+      const idLbl = document.getElementById('r-id-label');
+      if (idLbl) idLbl.textContent = r === 'profesor' ? 'Cédula *' : 'Tarjeta de Identidad *';
+      const grupoWrap = document.getElementById('r-grupo-wrap');
+      if (grupoWrap) grupoWrap.style.display = r === 'estudiante' ? 'block' : 'none';
+    }
+
+    function toggleEye(inputId, btnId) {
+      const i = document.getElementById(inputId);
+      const b = document.getElementById(btnId);
+      if (!i || !b) return;
+      i.type = i.type === 'password' ? 'text' : 'password';
+      b.textContent = i.type === 'password' ? '👁' : '🙈';
+    }
+
+    function doLogin(e) {
+      e.preventDefault();
+      const c = document.getElementById('l-email').value.trim().toLowerCase();
+      const p = document.getElementById('l-pass').value;
+      const err = document.getElementById('l-err');
+      const btn = document.getElementById('l-btn-t');
+      btn.innerHTML = '<span class="spinner"></span>';
+      document.getElementById('l-btn').disabled = true;
+      setTimeout(() => {
+        const u = DB.findUser(c, p);
+        if (u) { currentUser = u; DB.setSession(u); showMain(); showToast('¡Bienvenido!', u.nombres, 'ok') }
+        else { err.textContent = 'Credenciales incorrectas. Verifica tus datos.'; err.classList.add('show'); btn.textContent = 'Iniciar sesión'; document.getElementById('l-btn').disabled = false }
+      }, 550);
+    }
+
+    function doRegister(e) {
+      e.preventDefault();
+      const nombres = document.getElementById('r-nom').value.trim();
+      const apellidos = document.getElementById('r-ape').value.trim();
+      const doc = document.getElementById('r-id').value.trim();
+      const correo = document.getElementById('r-email').value.trim().toLowerCase();
+      const tel = document.getElementById('r-tel').value.trim();
+      const pass = document.getElementById('r-pass').value;
+      const pass2 = document.getElementById('r-pass2').value;
+      const grupoId = parseInt(document.getElementById('r-grupo')?.value) || null;
+      const err = document.getElementById('r-err');
+      const btn = document.getElementById('r-btn-t');
+
+      // Validaciones
+      err.classList.remove('show');
+      if (pass !== pass2) { err.textContent = 'Las contraseñas no coinciden.'; err.classList.add('show'); return }
+      if (pass.length < 6) { err.textContent = 'La contraseña debe tener mínimo 6 caracteres.'; err.classList.add('show'); return }
+      // Verificar correo duplicado
+      const db = DB.get();
+      const correoExiste = [...db.profesores, ...db.estudiantes].some(u => u.correo === correo);
+      if (correoExiste) { err.textContent = 'Ya existe una cuenta con ese correo.'; err.classList.add('show'); return }
+      const docExiste = [...db.profesores, ...db.estudiantes].some(u => (u.cedula || u.tarjeta_identidad) === doc);
+      if (docExiste) { err.textContent = 'Ya existe una cuenta con ese número de documento.'; err.classList.add('show'); return }
+
+      btn.innerHTML = '<span class="spinner"></span>';
+      document.getElementById('r-btn').disabled = true;
+
+      setTimeout(() => {
+        let newUser;
+        if (regRol === 'estudiante') {
+          const ids = db.ids || {};
+          newUser = { tarjeta_identidad: doc, nombres, apellidos, fecha_nacimiento: '', telefono: tel, correo, password: pass, codigo_grupo: grupoId, tipo: 'estudiante' };
+          db.estudiantes.push(newUser);
+        } else {
+          const maxId = db.profesores.reduce((m, p) => Math.max(m, p.codigo_profesor), 0);
+          newUser = { codigo_profesor: maxId + 1, cedula: doc, nombres, apellidos, telefono: tel, correo, password: pass, tipo: 'profesor' };
+          db.profesores.push(newUser);
+        }
+        DB.save(db);
+        supabaseClient.from('usuarios').insert([{ documento: doc, nombres, apellidos, correo, password: pass, telefono: tel, tipo: regRol, codigo_grupo: grupoId }]).then(({error}) => { if (error) console.error('Supabase auth error:', error) });
+        currentUser = newUser; DB.setSession(newUser);
+        showMain();
+        showToast('¡Cuenta creada!', 'Bienvenido a LAURA Plus', 'ok');
+      }, 600);
+    }
+
+    function doLogout() { currentUser = null; DB.clearSession(); showLogin(); showToast('Sesión cerrada', 'Hasta luego', 'inf') }
+
+    // ═══════════════════════════════════════════════════
+    // SCREENS
+    // ═══════════════════════════════════════════════════
+    function showLogin() { document.getElementById('login-screen').style.display = 'flex'; document.getElementById('main-screen').classList.remove('visible'); renderLogin() }
+    function showMain() { document.getElementById('login-screen').style.display = 'none'; document.getElementById('main-screen').classList.add('visible'); renderSidebar(); navigate('dashboard'); initRealtime() }
+
+    // ═══════════════════════════════════════════════════
+    // SIDEBAR & NAV
+    // ═══════════════════════════════════════════════════
+    let curPage = '';
+    function renderSidebar() {
+      const u = currentUser; if (!u) return;
+      const ini = initials(u.nombres, u.apellidos);
+      document.getElementById('sidebar').innerHTML = `
+    <div class="sb-header"><div class="sb-logo"><div class="sb-logo-icon">L+</div><div><div class="sb-brand">LAURA Plus</div><div class="sb-tagline">Kanban Académico</div></div></div></div>
+    <div class="sb-user"><div class="user-card"><div class="avatar">${ini}</div><div class="user-info"><div class="user-name">${u.nombres.split(' ')[0]} ${u.apellidos.split(' ')[0]}</div><div class="user-role-wrap"><span class="rbadge ${u.tipo}">${isProf() ? '👨‍🏫 Profesor' : '🎓 Estudiante'}</span></div></div></div></div>
+    <nav class="sb-nav">
+      <div class="nav-section">
+        <div class="nav-section-title">Principal</div>
+        <div class="nav-item" id="nav-dashboard" onclick="navigate('dashboard')"><span class="nav-icon">🏠</span>Dashboard</div>
+        <div class="nav-item" id="nav-calendar" onclick="navigate('calendar')"><span class="nav-icon">📅</span>Calendario</div>
+        <div class="nav-item" id="nav-kanban" onclick="navigate('kanban')"><span class="nav-icon">📋</span>Tablero Kanban<span class="nav-badge hidden" id="badge-kb">0</span></div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Gestión</div>
+        <div class="nav-item" id="nav-groups" onclick="navigate('groups')"><span class="nav-icon">🏫</span>${isProf() ? 'Grupos y Equipos' : 'Mi Grupo'}</div>
+        <div class="nav-item" id="nav-eval" onclick="navigate('eval')"><span class="nav-icon">${isProf() ? '📊' : '📈'}</span>${isProf() ? 'Evaluaciones' : 'Mis Calificaciones'}<span class="nav-badge hidden" id="badge-ev">0</span></div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Cuenta</div>
+        <div class="nav-item" id="nav-profile" onclick="navigate('profile')"><span class="nav-icon">👤</span>Mi Perfil</div>
+      </div>
+    </nav>
+    <div class="sb-footer"><div class="nav-item" onclick="doLogout()" style="color:var(--danger)"><span class="nav-icon">🚪</span>Cerrar sesión</div></div>`;
+      refreshBadges();
+    }
+    function navigate(page) {
+      curPage = page;
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      const nav = document.getElementById('nav-' + page); if (nav) nav.classList.add('active');
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      const pg = document.getElementById(page + '-page'); if (pg) pg.classList.add('active');
+      updateTopbar(page);
+      if (page === 'dashboard') renderDashboard();
+      else if (page === 'calendar') renderCalendar();
+      else if (page === 'kanban') renderKanban();
+      else if (page === 'groups') renderGroups();
+      else if (page === 'eval') renderEval();
+      else if (page === 'profile') renderProfile();
+    }
+    function updateTopbar(page) {
+      const titles = { dashboard: ['🏠 Dashboard', 'Resumen general del proyecto'], calendar: ['📅 Calendario', 'Fechas de entrega de proyectos'], kanban: ['📋 Tablero Kanban', 'Gestión visual de tareas'], groups: [isProf() ? '🏫 Grupos y Equipos' : '🏫 Mi Grupo', isProf() ? 'Administra grupos y equipos' : 'Tu grupo y compañeros'], eval: [isProf() ? '📊 Evaluaciones' : '📈 Mis Calificaciones', isProf() ? 'Revisa y califica entregas' : 'Historial de entregas'], profile: ['👤 Mi Perfil', 'Información de tu cuenta'] };
+      const [t, s] = titles[page] || ['LAURA Plus', ''];
+      document.getElementById('topbar-title').textContent = t; document.getElementById('topbar-sub').textContent = s;
+    }
+    function refreshBadges() {
+      const db = DB.get();
+      const ep = db.tareas.filter(t => t.estado === 'en_proceso').length;
+      const kb = document.getElementById('badge-kb'); if (kb) { kb.textContent = ep; kb.classList.toggle('hidden', ep === 0) }
+      if (isProf()) { const pend = db.entregas.filter(e => e.calificacion === null || e.calificacion === undefined).length; const ev = document.getElementById('badge-ev'); if (ev) { ev.textContent = pend; ev.classList.toggle('hidden', pend === 0) } }
+    }
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open') }
+
+    // ═══════════════════════════════════════════════════
+    // DASHBOARD
+    // ═══════════════════════════════════════════════════
+    function renderDashboard() {
+      const c = document.getElementById('dashboard-page'); if (!c) return;
+      const s = DB.getStats(); const db = DB.get(); const tareas = db.tareas;
+      c.innerHTML = `
+  <div class="stats-grid">
+    <div class="stat-card primary"><div class="stat-hdr"><span class="stat-lbl">Total Tareas</span><span class="stat-ico">📋</span></div><div class="stat-val">${s.total}</div><div class="stat-sub">en el proyecto</div><div class="prog-bar"><div class="prog-fill" style="width:${s.progreso}%"></div></div></div>
+    <div class="stat-card s-todo"><div class="stat-hdr"><span class="stat-lbl">Por hacer</span><span class="stat-ico">📌</span></div><div class="stat-val" style="color:var(--todo)">${s.por_hacer}</div><div class="stat-sub">sin iniciar</div></div>
+    <div class="stat-card s-prog"><div class="stat-hdr"><span class="stat-lbl">En proceso</span><span class="stat-ico">⚡</span></div><div class="stat-val" style="color:var(--prog)">${s.en_proceso}</div><div class="stat-sub">activas</div></div>
+    <div class="stat-card s-done"><div class="stat-hdr"><span class="stat-lbl">Completadas</span><span class="stat-ico">✅</span></div><div class="stat-val" style="color:var(--done)">${s.hecho}</div><div class="stat-sub">${s.progreso}% completado</div></div>
+    ${s.vencidas > 0 ? `<div class="stat-card s-danger"><div class="stat-hdr"><span class="stat-lbl">Vencidas</span><span class="stat-ico">⚠️</span></div><div class="stat-val" style="color:var(--danger)">${s.vencidas}</div><div class="stat-sub">requieren atención</div></div>` : ''}
+  </div>
+  <div class="dash-grid">
+    <div class="panel">
+      <div class="panel-hdr"><div class="panel-title">📋 Tareas recientes</div><button class="btn btn-ghost btn-sm" onclick="navigate('kanban')">Ver tablero →</button></div>
+      <div class="tbl-wrap" style="border:none;border-radius:0">
+        <table class="dtbl">
+          <thead><tr><th>Tarea</th><th>Estado</th><th>Responsable</th><th>Entrega</th></tr></thead>
+          <tbody>
+            ${tareas.slice(0, 6).map(t => {
+        const resp = t.responsable ? DB.getEstudianteById(t.responsable) : null;
+        const venc = new Date(t.fecha_entrega) < new Date() && t.estado !== 'hecho';
+        return `<tr onclick="openTaskDetail(${t.codigo_tarea})" style="cursor:pointer"><td><div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px">${esc(t.titulo)}</div><div style="font-size:.7rem;color:var(--tm)">%${t.valor_porcentaje}</div></td><td><span class="sbadge ${estadoClass(t.estado)}">${estadoLabel(t.estado)}</span></td><td style="font-size:.8rem">${resp ? resp.nombres.split(' ')[0] : '—'}</td><td style="font-size:.8rem;color:${venc ? 'var(--danger)' : 'var(--tm)'}">${fdateShort(t.fecha_entrega)}</td></tr>`;
+      }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="panel">
+        <div class="panel-hdr"><div class="panel-title">📈 Progreso</div></div>
+        <div class="panel-body" style="text-align:center">
+          <div style="font-size:2.8rem;font-weight:900;background:linear-gradient(135deg,var(--p400),var(--a400));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${s.progreso}%</div>
+          <div style="font-size:.8rem;color:var(--tm);margin-bottom:12px">${s.hecho} de ${s.total} completadas</div>
+          <div class="prog-bar" style="height:9px"><div class="prog-fill" style="width:${s.progreso}%"></div></div>
+          <div style="display:flex;justify-content:space-between;margin-top:14px">
+            ${[['📌', 'Por hacer', s.por_hacer, 'var(--todo)'], ['⚡', 'En proceso', s.en_proceso, 'var(--prog)'], ['✅', 'Hechas', s.hecho, 'var(--done)']].map(([e, l, v, c]) => `<div style="text-align:center"><div style="font-size:1.2rem;font-weight:900;color:${c}">${v}</div><div style="font-size:.65rem;color:var(--tm)">${l}</div></div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><div class="panel-title">👥 Equipo</div></div>
+        <div class="panel-body">
+          <div class="member-list">
+            ${db.estudiantes.slice(0, 4).map(e => {
+        const mt = db.tareas.filter(t => t.responsable === e.tarjeta_identidad);
+        const he = mt.filter(t => t.estado === 'hecho').length;
+        const pct = mt.length > 0 ? Math.round((he / mt.length) * 100) : 0;
+        return `<div class="member-item"><div class="member-av">${initials(e.nombres, e.apellidos)}</div><div style="flex:1"><div class="member-name">${e.nombres.split(' ')[0]} ${e.apellidos.split(' ')[0]}</div><div class="member-id">${mt.length} tareas · ${he} hechas</div></div><div class="prog-bar" style="width:48px;height:3px"><div class="prog-fill" style="width:${pct}%"></div></div></div>`;
+      }).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><div class="panel-title">⚡ Acciones rápidas</div></div>
+        <div class="panel-body" style="display:flex;flex-direction:column;gap:7px">
+          <button class="btn btn-primary" onclick="navigate('kanban')">📋 Ver tablero completo</button>
+          <button class="btn btn-secondary" onclick="openTaskModal(null)">＋ Nueva tarea</button>
+          ${isProf() ? `<button class="btn btn-secondary" onclick="navigate('eval')">📊 Revisar entregas</button><button class="btn btn-secondary" onclick="navigate('groups')">🏫 Gestionar grupos</button>` :
+          `<button class="btn btn-secondary" onclick="navigate('eval')">📈 Ver mis calificaciones</button>`}
+        </div>
+      </div>
+    </div>
+  </div>`;
+    }
+
+    // ═══════════════════════════════════════════════════
+    // KANBAN BOARD
+    // ═══════════════════════════════════════════════════
+    let dragId = null;
+    function renderKanban() {
+      const c = document.getElementById('kanban-page'); if (!c) return;
+      const materias = DB.getMaterias(); const equipos = DB.getEquipos();
+      c.innerHTML = `
+  <div class="kb-toolbar">
+    <div class="kb-filters">
+      <select class="fsel" id="f-mat" onchange="filterKanban()"><option value="">📚 Todas las materias</option>${materias.map(m => `<option value="${m.codigo_materia}">${esc(m.nombre)}</option>`).join('')}</select>
+      <select class="fsel" id="f-eq" onchange="filterKanban()"><option value="">👥 Todos los equipos</option>${equipos.map(e => `<option value="${e.codigo_equipo}">${esc(e.nombre)}</option>`).join('')}</select>
+      ${isEst() ? `<select class="fsel" id="f-mias" onchange="filterKanban()"><option value="">📋 Todas</option><option value="1">✋ Mis tareas</option></select>` : ''}
+    </div>
+    <button class="btn btn-primary" onclick="openTaskModal(null)">＋ Nueva tarea</button>
+  </div>
+  <div class="kb-board">
+    ${['por_hacer', 'en_proceso', 'hecho'].map(e => renderCol(e)).join('')}
+  </div>`;
+      loadCards();
+    }
+    function renderCol(estado) {
+      const map = { por_hacer: { cls: 'col-todo', lbl: 'Por hacer', emo: '📌' }, en_proceso: { cls: 'col-prog', lbl: 'En proceso', emo: '⚡' }, hecho: { cls: 'col-done', lbl: 'Hecho', emo: '✅' } };
+      const { cls, lbl, emo } = map[estado];
+      return `<div class="kb-col ${cls}" id="col-${estado}" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event,'${estado}')">
+    <div class="col-hdr"><div class="col-title-g"><div class="col-dot"></div><span class="col-title">${emo} ${lbl}</span></div><span class="col-count" id="cnt-${estado}">0</span></div>
+    <div class="col-cards" id="cards-${estado}"><div class="empty-col" id="empty-${estado}"><span style="font-size:26px">📂</span><span>Sin tareas</span></div></div>
+    <div class="col-add"><button class="add-btn" onclick="openTaskModal('${estado}')">+ Agregar tarea</button></div>
+  </div>`;
+    }
+    function loadCards(filtros = {}) {
+      const tareas = DB.getTareas(filtros);
+      ['por_hacer', 'en_proceso', 'hecho'].forEach(est => {
+        const col = document.getElementById('cards-' + est); const cnt = document.getElementById('cnt-' + est); const emp = document.getElementById('empty-' + est);
+        if (!col) return;
+        const fil = tareas.filter(t => t.estado === est);
+        if (emp) emp.style.display = fil.length === 0 ? 'flex' : 'none';
+        Array.from(col.children).filter(ch => !ch.id?.startsWith('empty-')).forEach(ch => ch.remove());
+        fil.forEach(t => col.appendChild(makeCard(t)));
+        if (cnt) cnt.textContent = fil.length;
+      });
+    }
+    function makeCard(t) {
+      const mats = DB.getMaterias(); const mat = mats.find(m => m.codigo_materia === t.codigo_materia);
+      const resp = t.responsable ? DB.getEstudianteById(t.responsable) : null;
+      const now = new Date(); const vd = new Date(t.fecha_entrega); const diff = Math.ceil((vd - now) / (86400000));
+      const venc = t.estado !== 'hecho' && vd < now; const hoy = diff === 0;
+      const fl = venc ? `Venció hace ${Math.abs(diff)}d` : hoy ? 'Vence hoy' : diff <= 3 ? `Vence en ${diff}d` : fdate(t.fecha_entrega);
+      const ini = resp ? initials(resp.nombres, resp.apellidos) : '?';
+      const rn = resp ? resp.nombres.split(' ')[0] : 'Sin asignar';
+      const d = document.createElement('div');
+      d.className = `task-card ${estadoClass(t.estado).replace('s-', '') === 'todo' ? 's-todo' : estadoClass(t.estado) === 's-prog' ? 's-prog' : 's-done'}`;
+      d.draggable = true; d.dataset.id = t.codigo_tarea; d.id = 'tc-' + t.codigo_tarea;
+      d.innerHTML = `${mat ? `<div class="task-materia">📚 ${esc(mat.nombre)}</div>` : ''}
+    <div class="task-title">${esc(t.titulo)}</div>
+    <div class="task-desc">${esc(t.descripcion)}</div>
+    <div class="task-footer">
+      <div class="task-assignee"><div class="task-av">${ini}</div><span class="task-aname">${esc(rn)}</span></div>
+      <div class="task-due ${venc ? 'venc' : hoy ? 'hoy' : ''}">📅 ${fl}</div>
+      <span class="task-pct">%${t.valor_porcentaje}</span>
+    </div>
+    <div class="task-acts">
+      <button class="tact-btn" onclick="openTaskDetail(${t.codigo_tarea})">👁 Ver</button>
+      ${canEdit(t) ? `<button class="tact-btn" onclick="openTaskModal(null,${t.codigo_tarea})">✏️ Editar</button>` : ''}
+      ${isEst() && t.estado !== 'hecho' ? `<button class="tact-btn" style="color:var(--p400)" onclick="openDelivery(${t.codigo_tarea})">📤 Entregar</button>` : ''}
+      ${isProf() ? `<button class="tact-btn" style="color:var(--warn)" onclick="openEvalModal(${t.codigo_tarea})">📊 Evaluar</button>` : ''}
+    </div>`;
+      d.addEventListener('dragstart', e => { dragId = t.codigo_tarea; e.dataTransfer.effectAllowed = 'move'; setTimeout(() => d.classList.add('dragging'), 0) });
+      d.addEventListener('dragend', () => { d.classList.remove('dragging'); document.querySelectorAll('.kb-col').forEach(c => c.classList.remove('drag-over')) });
+      return d;
+    }
+    function canEdit(t) { if (isProf()) return true; return t.creado_tipo === 'estudiante' && t.creado_por === currentUser.tarjeta_identidad }
+    function dragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.currentTarget.classList.add('drag-over') }
+    function dragLeave(e) { if (!e.currentTarget.contains(e.relatedTarget)) e.currentTarget.classList.remove('drag-over') }
+    function drop(e, newEst) {
+      e.preventDefault(); e.currentTarget.classList.remove('drag-over');
+      if (!dragId) return; const t = DB.getTareaById(dragId); if (!t || t.estado === newEst) { dragId = null; return }
+      if (isEst() && !canEdit(t) && t.responsable !== currentUser.tarjeta_identidad) { showToast('Sin permiso', 'Solo puedes mover tus tareas', 'err'); dragId = null; return }
+      DB.cambiarEstado(dragId, newEst); showToast('Estado actualizado', estadoLabel(newEst), 'ok');
+      loadCards(); refreshBadges(); dragId = null;
+    }
+    function filterKanban() {
+      const mat = parseInt(document.getElementById('f-mat')?.value) || null;
+      const eq = parseInt(document.getElementById('f-eq')?.value) || null;
+      const mias = document.getElementById('f-mias')?.value === '1';
+      const f = {};
+      if (mat) f.codigo_materia = mat; if (eq) f.codigo_equipo = eq;
+      if (mias && currentUser) f.responsable = currentUser.tarjeta_identidad;
+      loadCards(f);
+    }
+
+    // ── Task Modals ──
+    function openTaskModal(estIni, taskId = null) {
+      const t = taskId ? DB.getTareaById(taskId) : null;
+      const mats = DB.getMaterias(); const eqs = DB.getEquipos(); const ests = DB.getEstudiantes();
+      const isEdit = !!t;
+      const body = `<form id="tf" onsubmit="saveTask(event,${taskId || 'null'})">
+    <div class="form-sect-title">Información básica</div>
+    <div class="form-group"><label class="form-label">Título *</label><input type="text" id="tt" class="form-control" placeholder="Ej: Diseño del diagrama de clases" value="${t ? esc(t.titulo) : ''}" required maxlength="200"/></div>
+    <div class="form-group"><label class="form-label">Descripción *</label><textarea id="td" class="form-control" required placeholder="Describe los objetivos...">${t ? esc(t.descripcion) : ''}</textarea></div>
+    <div class="form-sect-title">Clasificación</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Materia</label><select id="tm" class="form-control"><option value="">Sin materia</option>${mats.map(m => `<option value="${m.codigo_materia}"${t && t.codigo_materia === m.codigo_materia ? ' selected' : ''}>${esc(m.nombre)}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">Equipo</label><select id="teq" class="form-control"><option value="">Sin equipo</option>${eqs.map(eq => `<option value="${eq.codigo_equipo}"${t && t.codigo_equipo === eq.codigo_equipo ? ' selected' : ''}>${esc(eq.nombre)}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Responsable</label><select id="tresp" class="form-control"><option value="">Sin asignar</option>${ests.map(e => `<option value="${e.tarjeta_identidad}"${t && t.responsable === e.tarjeta_identidad ? ' selected' : ''}>${esc(e.nombres + ' ' + e.apellidos)}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">Valor (%)</label><input type="number" id="tpct" class="form-control" min="0" max="100" value="${t ? t.valor_porcentaje : 10}"/></div>
+    </div>
+    <div class="form-sect-title">Fechas</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Inicio *</label><input type="date" id="ti" class="form-control" value="${t ? t.fecha_inicio : today()}" required/></div>
+      <div class="form-group"><label class="form-label">Entrega *</label><input type="date" id="te" class="form-control" value="${t ? t.fecha_entrega : ''}" required/></div>
+    </div>
+    <div class="form-group"><label class="form-label">Logro / Criterio</label><input type="text" id="tlog" class="form-control" placeholder="¿Qué debe demostrar el estudiante?" value="${t ? esc(t.logro || '') : ''}"/></div>
+    <div class="form-error" id="tf-err"></div>
+  </form>`;
+      openModal('tm', isEdit ? 'Editar Tarea' : 'Nueva Tarea', isEdit ? t.titulo : 'Crea una tarea para el tablero', body, `<button class="btn btn-secondary" onclick="closeModal('tm')">Cancelar</button><button type="submit" form="tf" class="btn btn-primary">${isEdit ? '💾 Guardar' : '＋ Crear tarea'}</button>`);
+    }
+    function saveTask(e, taskId) {
+      e.preventDefault();
+      const titulo = document.getElementById('tt').value.trim(); const desc = document.getElementById('td').value.trim();
+      const inicio = document.getElementById('ti').value; const entrega = document.getElementById('te').value;
+      const mat = parseInt(document.getElementById('tm').value) || null; const eq = parseInt(document.getElementById('teq').value) || null;
+      const resp = document.getElementById('tresp').value || null; const pct = parseFloat(document.getElementById('tpct').value) || 0;
+      const logro = document.getElementById('tlog').value.trim(); const err = document.getElementById('tf-err');
+      if (new Date(entrega) < new Date(inicio)) { err.textContent = 'La fecha de entrega no puede ser anterior a la de inicio.'; err.classList.add('show'); return }
+      const datos = { titulo, descripcion: desc, fecha_inicio: inicio, fecha_entrega: entrega, codigo_materia: mat, codigo_equipo: eq, responsable: resp, valor_porcentaje: pct, logro, creado_por: isProf() ? currentUser.codigo_profesor : currentUser.tarjeta_identidad, creado_tipo: currentUser.tipo };
+      if (taskId) { DB.actualizarTarea(taskId, datos); showToast('Tarea actualizada', titulo, 'ok') }
+      else { DB.crearTarea(datos); showToast('Tarea creada', titulo, 'ok') }
+      closeModal('tm'); loadCards(); refreshBadges();
+    }
+    function openTaskDetail(taskId) {
+      const t = DB.getTareaById(taskId); if (!t) return;
+      const mat = DB.getMaterias().find(m => m.codigo_materia === t.codigo_materia);
+      const resp = t.responsable ? DB.getEstudianteById(t.responsable) : null;
+      const entregas = DB.getEntregas({ codigo_tarea: taskId }); const ent = entregas[0];
+      const body = `
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:18px">
+      <span class="sbadge ${estadoClass(t.estado)}">${estadoLabel(t.estado)}</span>
+      <span class="task-pct">%${t.valor_porcentaje}</span>
+      ${mat ? `<span style="font-size:.75rem;color:var(--p400)">📚 ${esc(mat.nombre)}</span>` : ''}
+    </div>
+    <div class="form-group"><label class="form-label">Descripción</label><div style="background:var(--bgi);padding:12px;border-radius:var(--r-md);font-size:.875rem;color:var(--t2);line-height:1.6">${esc(t.descripcion)}</div></div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div><label class="form-label">📅 Inicio</label><div style="font-size:.875rem;color:var(--t1);font-weight:700">${fdate(t.fecha_inicio)}</div></div>
+      <div><label class="form-label">⏰ Entrega</label><div style="font-size:.875rem;color:var(--t1);font-weight:700">${fdate(t.fecha_entrega)}</div></div>
+    </div>
+    <div class="info-row"><label>Responsable</label><span>${resp ? esc(resp.nombres + ' ' + resp.apellidos) : 'Sin asignar'}</span></div>
+    ${t.logro ? `<div class="info-row"><label>Logro</label><span style="max-width:240px;text-align:right;font-size:.8rem">${esc(t.logro)}</span></div>` : ''}
+    ${ent ? `<div style="margin-top:16px"><div style="font-size:.8rem;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📤 Entrega registrada</div>
+    <div class="info-row"><label>Fecha entrega</label><span>${fdatetime(ent.fecha_entrega)}</span></div>
+    <div class="info-row"><label>Estado</label><span>${ent.tardio ? '⚠️ Tardía' : '✅ A tiempo'}</span></div>
+    ${ent.calificacion != null ? `<div class="info-row"><label>Calificación</label><span class="grade-display ${gClass(ent.calificacion)}">${ent.calificacion.toFixed(1)}</span></div><div class="info-row"><label>Observaciones</label><span style="max-width:220px;text-align:right;font-size:.8rem">${esc(ent.observaciones || '')}</span></div>` : '<div style="font-size:.8rem;color:var(--tm);padding:8px 0">Pendiente de evaluación</div>'}</div>` :
+          isEst() && t.estado !== 'hecho' ? `<div style="margin-top:16px"><button class="btn btn-primary btn-full" onclick="closeModal('dtl');openDelivery(${taskId})">📤 Registrar entrega</button></div>` : ''}`;
+      openModal('dtl', t.titulo, 'Detalle de la tarea', body, `<button class="btn btn-secondary" onclick="closeModal('dtl')">Cerrar</button>`);
+    }
+
+    // ═══════════════════════════════════════════════════
+    // CALENDAR
+    // ═══════════════════════════════════════════════════
+    let currentCalDate = new Date();
+
+    function renderCalendar() {
+      const c = document.getElementById('calendar-page'); if (!c) return;
+      const year = currentCalDate.getFullYear();
+      const month = currentCalDate.getMonth();
+      const firstDay = new Date(year, month, 1).getDay(); // 0 = Sunday
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      const today = new Date();
+      const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+
+      // Obtenemos tareas y las agrupamos por día (solo del mes actual)
+      const tareas = DB.getTareas();
+      const tareasMes = {};
+      tareas.forEach(t => {
+        if (!t.fecha_entrega) return;
+        const [ty, tm, td] = t.fecha_entrega.split('-');
+        if (parseInt(ty) === year && parseInt(tm) - 1 === month) {
+          const d = parseInt(td);
+          if (!tareasMes[d]) tareasMes[d] = [];
+          tareasMes[d].push(t);
+        }
+      });
+
+      let gridHtml = '<div class="cal-grid">';
+      const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+      dayNames.forEach(dn => { gridHtml += `<div class="cal-day-name">${dn}</div>`; });
+
+      let dayCount = 1;
+      // Las celdas vacías al inicio (del mes anterior)
+      for (let i = 0; i < firstDay; i++) {
+        gridHtml += `<div class="cal-cell empty"></div>`;
+      }
+
+      // Celdas del mes
+      while (dayCount <= daysInMonth) {
+        const isToday = isCurrentMonth && dayCount === today.getDate();
+        const tasks = tareasMes[dayCount] || [];
+        const taskHtml = tasks.map(t => {
+          const cls = t.estado === 'por_hacer' ? 's-todo' : t.estado === 'en_proceso' ? 's-prog' : 's-done';
+          return `<div class="cal-task ${cls}" onclick="openTaskDetail(${t.codigo_tarea})" title="${esc(t.titulo)}">${esc(t.titulo)}</div>`;
+        }).join('');
+
+        gridHtml += `<div class="cal-cell ${isToday ? 'today' : ''}">
+          <div class="cal-date">${dayCount}</div>
+          ${taskHtml}
+        </div>`;
+        
+        dayCount++;
+      }
+
+      // Rellenar la última fila
+      const totalCells = firstDay + daysInMonth;
+      const remainder = totalCells % 7;
+      if (remainder > 0) {
+        for (let i = 0; i < 7 - remainder; i++) {
+          gridHtml += `<div class="cal-cell empty"></div>`;
+        }
+      }
+
+      gridHtml += '</div>';
+
+      c.innerHTML = `
+        <div class="panel">
+          <div class="panel-body">
+            <div class="cal-header">
+              <button class="btn btn-secondary" onclick="changeMonth(-1)">◀ Anterior</button>
+              <div class="cal-title">${monthNames[month]} ${year}</div>
+              <button class="btn btn-secondary" onclick="changeMonth(1)">Siguiente ▶</button>
+            </div>
+            ${gridHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    function changeMonth(dir) {
+      currentCalDate.setMonth(currentCalDate.getMonth() + dir);
+      renderCalendar();
+    }
+
+    // ═══════════════════════════════════════════════════
+    // GROUPS
+    // ═══════════════════════════════════════════════════
+    function renderGroups() {
+      const c = document.getElementById('groups-page'); if (!c) return;
+      if (isProf()) renderGroupsProf(c); else renderGroupsEst(c);
+    }
+    function renderGroupsProf(c) {
+      const grupos = DB.getGrupos(); const equipos = DB.getEquipos();
+      c.innerHTML = `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:10px">
+    <div><h2 style="font-size:1.2rem;font-weight:800;color:var(--t1)">Grupos de Trabajo</h2><p style="font-size:.8rem;color:var(--tm);margin-top:3px">Administra grupos y equipos</p></div>
+    <button class="btn btn-primary" onclick="openGrupoModal()">＋ Nuevo Grupo</button>
+  </div>
+  <div class="groups-grid mb16" id="grupos-grid">
+    ${grupos.map(g => { const ests = DB.getEstudiantesByGrupo(g.codigo_grupo); const eqs = DB.getEquipos({ codigo_grupo: g.codigo_grupo }); return `<div class="group-card" onclick="openGrupoDetail(${g.codigo_grupo})"><div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px"><div class="group-icon">🏫</div><div><div class="group-name">${esc(g.nombre)}</div><div class="group-desc">${esc(g.grado + ' · ' + (g.descripcion || ''))}</div></div></div><div style="display:flex;gap:14px"><div class="grp-stat"><strong>${ests.length}</strong> estudiantes</div><div class="grp-stat"><strong>${eqs.length}</strong> equipos</div></div></div>`; }).join('')}
+    ${grupos.length === 0 ? `<div class="empty-state" style="grid-column:1/-1"><div class="empty-ico">🏫</div><div class="empty-title">Sin grupos</div><div class="empty-desc">Crea el primer grupo</div><button class="btn btn-primary" onclick="openGrupoModal()">＋ Crear grupo</button></div>` : ''}
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <h3 style="font-size:1rem;font-weight:800;color:var(--t1)">👥 Equipos de Trabajo</h3>
+    <button class="btn btn-secondary" onclick="openEquipoModal()">＋ Conformar Equipo</button>
+  </div>
+  <div class="groups-grid">
+    ${equipos.map(eq => { const grupo = DB.getGrupoById(eq.codigo_grupo); const mat = DB.getMaterias().find(m => m.codigo_materia === eq.codigo_materia); const ints = eq.integrantes.map(id => DB.getEstudianteById(id)).filter(Boolean); return `<div class="group-card" onclick="openEquipoDetail(${eq.codigo_equipo})"><div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px"><div class="group-icon">⚡</div><div><div class="group-name">${esc(eq.nombre)}</div><div class="group-desc">${grupo ? esc(grupo.nombre) : ''} · ${mat ? esc(mat.nombre) : ''}</div></div></div><div style="display:flex;gap:5px;flex-wrap:wrap">${ints.map(e => `<div style="display:flex;align-items:center;gap:3px;background:var(--bgi);padding:2px 7px;border-radius:var(--r-f);border:1px solid var(--b0)"><div class="task-av" style="width:16px;height:16px;font-size:7px">${initials(e.nombres, e.apellidos)}</div><span style="font-size:.65rem;color:var(--t2)">${e.nombres.split(' ')[0]}</span></div>`).join('')}</div></div>`; }).join('')}
+    ${equipos.length === 0 ? `<div class="empty-state"><div class="empty-ico">👥</div><div class="empty-title">Sin equipos</div><div class="empty-desc">Conforma equipos de trabajo</div></div>` : ''}
+  </div>`;
+    }
+    function renderGroupsEst(c) {
+      const u = currentUser; const grupo = u.codigo_grupo ? DB.getGrupoById(u.codigo_grupo) : null;
+      const companeros = grupo ? DB.getEstudiantesByGrupo(grupo.codigo_grupo) : [];
+      const equipos = DB.getEquipos({ codigo_grupo: u.codigo_grupo });
+      const miEq = equipos.find(eq => eq.integrantes.includes(u.tarjeta_identidad));
+      c.innerHTML = `
+  ${grupo ? `<div class="panel" style="margin-bottom:20px"><div class="panel-hdr"><div class="panel-title">🏫 Mi Grupo</div></div><div class="panel-body"><div class="info-row"><label>Nombre</label><span>${esc(grupo.nombre)}</span></div><div class="info-row"><label>Grado</label><span>${grupo.grado}</span></div><div class="info-row"><label>Integrantes</label><span>${companeros.length}</span></div></div></div>
+  <div class="panel" style="margin-bottom:20px"><div class="panel-hdr"><div class="panel-title">👨‍🎓 Compañeros</div></div><div class="panel-body"><div class="member-list">${companeros.map(e => `<div class="member-item"><div class="member-av">${initials(e.nombres, e.apellidos)}</div><div><div class="member-name">${esc(e.nombres + ' ' + e.apellidos)}${e.tarjeta_identidad === u.tarjeta_identidad ? ' <span style="font-size:.6rem;color:var(--p400);font-weight:800">(Tú)</span>' : ''}</div><div class="member-id">${e.tarjeta_identidad}</div></div></div>`).join('')}</div></div></div>
+  ${miEq ? `<div class="panel"><div class="panel-hdr"><div class="panel-title">⚡ Mi Equipo: ${esc(miEq.nombre)}</div></div><div class="panel-body"><div class="member-list">${miEq.integrantes.map(id => { const e = DB.getEstudianteById(id); return e ? `<div class="member-item"><div class="member-av">${initials(e.nombres, e.apellidos)}</div><div><div class="member-name">${esc(e.nombres + ' ' + e.apellidos)}${id === u.tarjeta_identidad ? ' <span style="font-size:.6rem;color:var(--p400);font-weight:800">(Tú)</span>' : ''}</div><div class="member-id">${id}</div></div></div>` : '' }).join('')}</div></div></div>` : `<div class="empty-state"><div class="empty-ico">👥</div><div class="empty-title">Sin equipo asignado</div><div class="empty-desc">Tu profesor aún no ha conformado un equipo para ti.</div></div>`}` : `<div class="empty-state"><div class="empty-ico">🏫</div><div class="empty-title">Sin grupo asignado</div><div class="empty-desc">Contacta a tu profesor.</div></div>`}`;
+    }
+    function openGrupoModal() {
+      const profs = DB.getProfesores();
+      openModal('gmod', 'Nuevo Grupo', 'Crea un grupo de trabajo', `<form id="gf" onsubmit="saveGrupo(event)"><div class="form-group"><label class="form-label">Nombre *</label><input type="text" id="gnom" class="form-control" placeholder="Ej: Ficha 319 – ADSO" required/></div><div class="form-row"><div class="form-group"><label class="form-label">Grado *</label><input type="text" id="ggra" class="form-control" placeholder="Ej: 10°" required/></div><div class="form-group"><label class="form-label">Profesor</label><select id="gprof" class="form-control"><option value="">Seleccionar...</option>${profs.map(p => `<option value="${p.codigo_profesor}">${esc(p.nombres + ' ' + p.apellidos)}</option>`).join('')}</select></div></div><div class="form-group"><label class="form-label">Descripción</label><input type="text" id="gdesc" class="form-control" placeholder="Descripción del grupo"/></div></form>`, `<button class="btn btn-secondary" onclick="closeModal('gmod')">Cancelar</button><button type="submit" form="gf" class="btn btn-primary">＋ Crear Grupo</button>`);
+    }
+    function saveGrupo(e) {
+      e.preventDefault();
+      DB.crearGrupo({ nombre: document.getElementById('gnom').value.trim(), grado: document.getElementById('ggra').value.trim(), descripcion: document.getElementById('gdesc').value.trim(), codigo_profesor: parseInt(document.getElementById('gprof').value) || null });
+      showToast('Grupo creado', '', 'ok'); closeModal('gmod'); renderGroups();
+    }
+    function openEquipoModal() {
+      const grupos = DB.getGrupos(); const mats = DB.getMaterias(); const ests = DB.getEstudiantes();
+      openModal('emod', 'Conformar Equipo', 'RF09 – Solo el profesor puede conformar equipos', `<form id="ef" onsubmit="saveEquipo(event)"><div class="form-group"><label class="form-label">Nombre del equipo *</label><input type="text" id="enom" class="form-control" placeholder="Ej: Equipo Alpha" required/></div><div class="form-row"><div class="form-group"><label class="form-label">Grupo *</label><select id="egrp" class="form-control" required onchange="updateChks()"><option value="">Seleccionar...</option>${grupos.map(g => `<option value="${g.codigo_grupo}">${esc(g.nombre)}</option>`).join('')}</select></div><div class="form-group"><label class="form-label">Materia</label><select id="emat" class="form-control"><option value="">Sin materia</option>${mats.map(m => `<option value="${m.codigo_materia}">${esc(m.nombre)}</option>`).join('')}</select></div></div><div class="form-group"><label class="form-label">Descripción</label><input type="text" id="edesc" class="form-control" placeholder="Objetivo del equipo"/></div><div class="form-group"><label class="form-label">Integrantes *</label><p style="font-size:.75rem;color:var(--tm);margin-bottom:7px">Selecciona el grupo primero</p><div class="chk-list" id="echks">${ests.map(e => `<label class="chk-item"><input type="checkbox" name="int" value="${e.tarjeta_identidad}"/><div class="member-av" style="width:26px;height:26px;font-size:10px">${initials(e.nombres, e.apellidos)}</div><div><div style="font-size:.8rem;font-weight:700;color:var(--t1)">${esc(e.nombres + ' ' + e.apellidos)}</div><div style="font-size:.65rem;color:var(--tm)">${e.tarjeta_identidad}</div></div></label>`).join('')}</div></div><div class="form-error" id="ef-err"></div></form>`, `<button class="btn btn-secondary" onclick="closeModal('emod')">Cancelar</button><button type="submit" form="ef" class="btn btn-primary">⚡ Conformar Equipo</button>`, 'modal-lg');
+    }
+    function updateChks() {
+      const gid = parseInt(document.getElementById('egrp').value); const cont = document.getElementById('echks'); if (!cont) return;
+      if (!gid) { cont.innerHTML = '<p style="font-size:.75rem;color:var(--tm)">Selecciona un grupo primero</p>'; return }
+      const ests = DB.getEstudiantesByGrupo(gid);
+      if (!ests.length) { cont.innerHTML = '<p style="font-size:.75rem;color:var(--tm)">Sin estudiantes en este grupo</p>'; return }
+      cont.innerHTML = ests.map(e => `<label class="chk-item"><input type="checkbox" name="int" value="${e.tarjeta_identidad}"/><div class="member-av" style="width:26px;height:26px;font-size:10px">${initials(e.nombres, e.apellidos)}</div><div><div style="font-size:.8rem;font-weight:700;color:var(--t1)">${esc(e.nombres + ' ' + e.apellidos)}</div><div style="font-size:.65rem;color:var(--tm)">${e.tarjeta_identidad}</div></div></label>`).join('');
+    }
+    function saveEquipo(e) {
+      e.preventDefault();
+      const nom = document.getElementById('enom').value.trim(); const gid = parseInt(document.getElementById('egrp').value);
+      const mid = parseInt(document.getElementById('emat').value) || null; const desc = document.getElementById('edesc').value.trim();
+      const ints = Array.from(document.querySelectorAll('input[name="int"]:checked')).map(c => c.value);
+      const err = document.getElementById('ef-err');
+      if (!ints.length) { err.textContent = 'Selecciona al menos un integrante.'; err.classList.add('show'); return }
+      DB.crearEquipo({ nombre: nom, descripcion: desc, codigo_grupo: gid, codigo_materia: mid, codigo_profesor: currentUser.codigo_profesor, integrantes: ints });
+      showToast('Equipo conformado', nom, 'ok'); closeModal('emod'); renderGroups();
+    }
+    function openGrupoDetail(gid) {
+      const g = DB.getGrupoById(gid); if (!g) return;
+      const ests = DB.getEstudiantesByGrupo(gid); const asigs = DB.getAsignaciones({ codigo_grupo: gid }); const mats = DB.getMaterias();
+      openModal('gdet', g.nombre, `Grupo ${g.grado}`, `<div class="info-row"><label>Nombre</label><span>${esc(g.nombre)}</span></div><div class="info-row"><label>Grado</label><span>${g.grado}</span></div><div style="margin-top:14px"><div style="font-size:.8rem;font-weight:800;color:var(--t2);margin-bottom:10px">👨‍🎓 Estudiantes (${ests.length})</div><div class="member-list">${ests.map(e => `<div class="member-item"><div class="member-av">${initials(e.nombres, e.apellidos)}</div><div><div class="member-name">${esc(e.nombres + ' ' + e.apellidos)}</div><div class="member-id">${e.correo}</div></div></div>`).join('')}${!ests.length ? '<p style="color:var(--tm);font-size:.8rem">Sin estudiantes</p>' : ''}</div></div>${asigs.length ? `<div style="margin-top:14px"><div style="font-size:.8rem;font-weight:800;color:var(--t2);margin-bottom:10px">📚 Materias</div>${asigs.map(a => { const m = mats.find(x => x.codigo_materia === a.codigo_materia); return m ? `<div style="font-size:.875rem;color:var(--t2);padding:4px 0">📖 ${m.nombre}</div>` : '' }).join('')}</div>` : ''}`, `<button class="btn btn-secondary" onclick="closeModal('gdet')">Cerrar</button>`);
+    }
+    function openEquipoDetail(eid) {
+      const eq = DB.getEquipos().find(x => x.codigo_equipo === eid); if (!eq) return;
+      const ints = eq.integrantes.map(id => DB.getEstudianteById(id)).filter(Boolean);
+      const mat = DB.getMaterias().find(m => m.codigo_materia === eq.codigo_materia);
+      openModal('edet', eq.nombre, 'Detalle del equipo', `<div class="info-row"><label>Nombre</label><span>${esc(eq.nombre)}</span></div><div class="info-row"><label>Materia</label><span>${mat ? esc(mat.nombre) : 'Sin materia'}</span></div><div class="info-row"><label>Creado</label><span>${fdate(eq.fecha_creacion)}</span></div><div style="margin-top:14px"><div style="font-size:.8rem;font-weight:800;color:var(--t2);margin-bottom:10px">👥 Integrantes</div><div class="member-list">${ints.map(e => `<div class="member-item"><div class="member-av">${initials(e.nombres, e.apellidos)}</div><div><div class="member-name">${esc(e.nombres + ' ' + e.apellidos)}</div><div class="member-id">${e.tarjeta_identidad}</div></div></div>`).join('')}</div></div>`, `<button class="btn btn-secondary" onclick="closeModal('edet')">Cerrar</button>`);
+    }
+
+    // ═══════════════════════════════════════════════════
+    // DELIVERY & EVALUATION
+    // ═══════════════════════════════════════════════════
+    function openDelivery(taskId) {
+      const t = DB.getTareaById(taskId); if (!t) return; const u = currentUser;
+      const ents = DB.getEntregas({ codigo_tarea: taskId });
+      if (ents.some(e => e.tarjeta_identidad === u.tarjeta_identidad)) { showToast('Ya entregaste', 'No puedes entregar más de una vez.', 'wrn'); return }
+      const tardio = new Date() > new Date(t.fecha_entrega);
+      openModal('dlv', 'Registrar Entrega', t.titulo, `
+    <div style="background:var(--bgi);padding:13px;border-radius:var(--r-md);margin-bottom:18px">
+      <div style="font-weight:800;color:var(--t1);margin-bottom:5px">${esc(t.titulo)}</div>
+      <div style="font-size:.8rem;color:var(--t2);margin-bottom:9px">${esc(t.descripcion)}</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:.75rem;color:var(--tm)">📅 Entrega: ${fdate(t.fecha_entrega)}</span>
+        ${tardio ? `<span style="background:var(--danger-bg);color:var(--danger);font-size:.65rem;font-weight:800;padding:2px 8px;border-radius:var(--r-f)">⚠️ TARDÍA</span>` : `<span style="background:var(--ok-bg);color:var(--ok);font-size:.65rem;font-weight:800;padding:2px 8px;border-radius:var(--r-f)">✅ A tiempo</span>`}
+      </div>
+    </div>
+    ${tardio ? `<div style="background:var(--danger-bg);border:1px solid rgba(239,68,68,.3);padding:11px;border-radius:var(--r-md);margin-bottom:14px"><p style="font-size:.8rem;color:var(--danger);line-height:1.5"><strong>⚠️ Atención:</strong> Estás entregando después de la fecha límite. El profesor podrá aplicar la regla de entrega tardía.</p></div>` : ''}
+    <form id="dlvf" onsubmit="submitDelivery(event,${taskId})">
+      <div class="form-group"><label class="form-label">Descripción de la entrega *</label><textarea id="dlvd" class="form-control" placeholder="Describe qué entregaste y cómo lo realizaste..." required style="min-height:110px"></textarea></div>
+      <div class="form-group"><label class="form-label">Nombre del archivo</label><div class="input-wrap"><span class="inp-icon">📎</span><input type="text" id="dlvf2" class="form-control" placeholder="Ej: entrega_v1.pdf"/></div><p class="hint">Ingresa el nombre del archivo que subirías en un entorno real.</p></div>
+    </form>`, `<button class="btn btn-secondary" onclick="closeModal('dlv')">Cancelar</button><button type="submit" form="dlvf" class="btn btn-primary">📤 Confirmar entrega</button>`);
+    }
+    function submitDelivery(e, taskId) {
+      e.preventDefault(); const u = currentUser; const t = DB.getTareaById(taskId);
+      const desc = document.getElementById('dlvd').value.trim(); const arch = document.getElementById('dlvf2').value.trim() || 'entrega.pdf';
+      const tardio = new Date() > new Date(t.fecha_entrega);
+      DB.registrarEntrega({ codigo_tarea: taskId, tarjeta_identidad: u.tarjeta_identidad, descripcion: desc, archivo_nombre: arch, fecha_entrega: new Date().toISOString(), tardio });
+      if (!tardio) DB.cambiarEstado(taskId, 'hecho');
+      showToast(tardio ? '⚠️ Entrega tardía' : '✅ Entrega registrada', tardio ? 'Se aplicará la regla de entrega tardía.' : 'Tu entrega fue enviada correctamente.', tardio ? 'wrn' : 'ok');
+      closeModal('dlv'); loadCards(); refreshBadges();
+    }
+    function renderEval() {
+      const c = document.getElementById('eval-page'); if (!c) return;
+      if (isProf()) renderEvalProf(c); else renderMisCalif(c);
+    }
+    function renderEvalProf(c) {
+      const db = DB.get(); const ents = db.entregas;
+      const pend = ents.filter(e => e.calificacion == null); const calif = ents.filter(e => e.calificacion != null);
+      const ahora = new Date();
+      const vecSinEnt = db.tareas.filter(t => { if (new Date(t.fecha_entrega) >= ahora || t.estado === 'hecho') return false; return DB.getEntregas({ codigo_tarea: t.codigo_tarea }).length === 0 });
+      c.innerHTML = `
+  <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:22px">
+    <div class="stat-card primary"><div class="stat-hdr"><span class="stat-lbl">Total</span><span class="stat-ico">📤</span></div><div class="stat-val">${ents.length}</div></div>
+    <div class="stat-card s-prog"><div class="stat-hdr"><span class="stat-lbl">Por evaluar</span><span class="stat-ico">⏳</span></div><div class="stat-val" style="color:var(--prog)">${pend.length}</div></div>
+    <div class="stat-card s-done"><div class="stat-hdr"><span class="stat-lbl">Calificadas</span><span class="stat-ico">✅</span></div><div class="stat-val" style="color:var(--done)">${calif.length}</div></div>
+  </div>
+  ${pend.length ? `<div class="panel" style="margin-bottom:22px"><div class="panel-hdr"><div class="panel-title">⏳ Pendientes de evaluación</div></div><div class="tbl-wrap" style="border:none;border-radius:0"><table class="dtbl"><thead><tr><th>Tarea</th><th>Estudiante</th><th>Fecha entrega</th><th>Estado</th><th></th></tr></thead><tbody>${pend.map(en => { const t = DB.getTareaById(en.codigo_tarea); const est = DB.getEstudianteById(en.tarjeta_identidad); return t && est ? `<tr><td><div style="font-weight:700">${esc(t.titulo)}</div><div style="font-size:.7rem;color:var(--tm)">%${t.valor_porcentaje}</div></td><td><div style="font-weight:700">${esc(est.nombres + ' ' + est.apellidos)}</div></td><td><div style="font-size:.8rem">${fdatetime(en.fecha_entrega)}</div>${en.tardio ? '<span class="sbadge s-noe">Tardía</span>' : '<span class="sbadge s-done">A tiempo</span>'}</td><td><span class="sbadge s-pend">Pendiente</span></td><td><button class="btn btn-primary btn-sm" onclick="openEvalModal(${t.codigo_tarea})">📊 Calificar</button></td></tr>` : '' }).join('')}</tbody></table></div></div>` : `<div class="panel" style="margin-bottom:22px"><div class="empty-state"><div class="empty-ico">🎉</div><div class="empty-title">¡Todo evaluado!</div></div></div>`}
+  ${calif.length ? `<div class="panel" style="margin-bottom:22px"><div class="panel-hdr"><div class="panel-title">✅ Calificadas</div></div><div class="tbl-wrap" style="border:none;border-radius:0"><table class="dtbl"><thead><tr><th>Tarea</th><th>Estudiante</th><th>Fecha entrega</th><th>Nota</th></tr></thead><tbody>${calif.map(en => { const t = DB.getTareaById(en.codigo_tarea); const est = DB.getEstudianteById(en.tarjeta_identidad); return t && est ? `<tr><td style="font-weight:700">${esc(t.titulo)}</td><td>${esc(est.nombres + ' ' + est.apellidos)}</td><td style="font-size:.8rem">${fdatetime(en.fecha_entrega)}</td><td><span class="grade-display ${gClass(en.calificacion)}">${en.calificacion.toFixed(1)}</span></td></tr>` : '' }).join('')}</tbody></table></div></div>` : ''}
+  ${vecSinEnt.length ? `<div class="panel" style="border-color:rgba(239,68,68,.3)"><div class="panel-hdr"><div class="panel-title" style="color:var(--danger)">⚠️ Vencidas sin entrega</div></div><div class="tbl-wrap" style="border:none;border-radius:0"><table class="dtbl"><thead><tr><th>Tarea</th><th>Responsable</th><th>Venció</th><th></th></tr></thead><tbody>${vecSinEnt.map(t => { const resp = t.responsable ? DB.getEstudianteById(t.responsable) : null; return `<tr><td style="font-weight:700">${esc(t.titulo)}</td><td>${resp ? esc(resp.nombres + ' ' + resp.apellidos) : 'Sin asignar'}</td><td style="color:var(--danger)">${fdate(t.fecha_entrega)}</td><td><button class="btn btn-danger btn-sm" onclick="openEvalSinEnt(${t.codigo_tarea})">📊 Calificar</button></td></tr>`; }).join('')}</tbody></table></div></div>` : ''}`;
+    }
+    function renderMisCalif(c) {
+      const u = currentUser;
+      const ents = DB.getEntregas({ tarjeta_identidad: u.tarjeta_identidad });
+      const ahora = new Date();
+      const tareasPend = DB.getTareas({ responsable: u.tarjeta_identidad }).filter(t => !ents.map(e => e.codigo_tarea).includes(t.codigo_tarea) && t.estado !== 'hecho');
+      c.innerHTML = `
+  <div style="margin-bottom:22px"><h2 style="font-size:1.2rem;font-weight:800;color:var(--t1)">Mis Entregas y Calificaciones</h2><p style="font-size:.8rem;color:var(--tm);margin-top:3px">Historial de tus entregas</p></div>
+  ${ents.length ? `<div style="display:flex;flex-direction:column;gap:14px;margin-bottom:24px">${ents.map(en => { const t = DB.getTareaById(en.codigo_tarea); if (!t) return ''; const cal = en.calificacion != null; return `<div class="eval-card"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><div><div style="font-size:.9375rem;font-weight:800;color:var(--t1);margin-bottom:5px">${esc(t.titulo)}</div><div style="display:flex;gap:10px;flex-wrap:wrap"><span style="font-size:.75rem;color:var(--tm)">${fdatetime(en.fecha_entrega)}</span>${en.tardio ? '<span style="color:var(--danger);font-size:.7rem">⚠️ Tardía</span>' : '<span style="color:var(--ok);font-size:.7rem">✅ A tiempo</span>'}<span class="task-pct">%${t.valor_porcentaje}</span></div></div>${cal ? `<div style="text-align:center;padding:7px 14px;background:var(--bgi);border-radius:var(--r-md)"><div style="font-size:.6rem;font-weight:800;color:var(--tm);text-transform:uppercase;margin-bottom:2px">Nota</div><div class="grade-display ${gClass(en.calificacion)}">${en.calificacion.toFixed(1)}</div></div>` : `<span class="sbadge s-pend">Pendiente</span>`}</div>${en.descripcion && en.descripcion != '[Sin entrega]' ? `<div style="background:var(--bgi);padding:10px 13px;border-radius:var(--r-md);font-size:.8rem;color:var(--t2);line-height:1.5;margin-top:10px">${esc(en.descripcion)}</div>` : ''} ${cal && en.observaciones ? `<div style="background:rgba(99,102,241,.05);border:1px solid rgba(99,102,241,.2);padding:10px 13px;border-radius:var(--r-md);font-size:.8rem;color:var(--t2);margin-top:8px"><span style="font-weight:800;color:var(--p400)">💬 Retroalimentación:</span> ${esc(en.observaciones)}</div>` : ''}</div>`; }).join('')}</div>` : `<div class="empty-state" style="margin-bottom:24px"><div class="empty-ico">📭</div><div class="empty-title">Sin entregas</div><div class="empty-desc">Aún no has registrado ninguna entrega.</div></div>`}
+  ${tareasPend.length ? `<h3 style="font-size:1rem;font-weight:800;color:var(--t1);margin-bottom:14px">📋 Tareas pendientes</h3><div style="display:flex;flex-direction:column;gap:9px">${tareasPend.map(t => { const venc = new Date(t.fecha_entrega) < ahora; return `<div style="background:var(--bgi);padding:13px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid ${venc ? 'rgba(239,68,68,.3)' : 'var(--b0)'}"><div><div style="font-weight:700;color:var(--t1)">${esc(t.titulo)}</div><div style="font-size:.75rem;color:${venc ? 'var(--danger)' : 'var(--tm)'}">${venc ? '⚠️ Venció: ' : '📅 '}${fdate(t.fecha_entrega)}</div></div><button class="btn btn-primary btn-sm" onclick="openDelivery(${t.codigo_tarea})">📤 Entregar</button></div>`; }).join('')}</div>` : ''} `;
+    }
+    function openEvalModal(taskId) {
+      const t = DB.getTareaById(taskId); if (!t) return;
+      const ents = DB.getEntregas({ codigo_tarea: taskId }); const en = ents[0];
+      if (!en) { openEvalSinEnt(taskId); return }
+      const est = DB.getEstudianteById(en.tarjeta_identidad);
+      openModal('evmod', 'Calificar Entrega', t.titulo, `
+    <div style="background:var(--bgi);padding:13px;border-radius:var(--r-md);margin-bottom:18px">
+      <div style="font-size:.7rem;font-weight:800;color:var(--tm);text-transform:uppercase;margin-bottom:4px">ENTREGA DE:</div>
+      <div style="font-size:.9375rem;font-weight:800;color:var(--t1)">${est ? esc(est.nombres + ' ' + est.apellidos) : 'Estudiante'}</div>
+      <div style="font-size:.75rem;color:var(--tm);margin-top:4px">${fdatetime(en.fecha_entrega)} ${en.tardio ? '<span style="color:var(--danger);font-weight:800">⚠️ TARDÍA</span>' : ''}</div>
+    </div>
+    <div class="form-group"><label class="form-label">Descripción entregada</label><div style="background:var(--bgi);padding:11px;border-radius:var(--r-md);font-size:.8rem;color:var(--t2);line-height:1.5">${esc(en.descripcion || 'Sin descripción')}</div></div>
+    ${en.archivo_nombre ? `<div class="form-group"><label class="form-label">Archivo</label><div style="background:var(--bgi);padding:9px 13px;border-radius:var(--r-md);display:flex;align-items:center;gap:7px"><span>📎</span><span style="font-size:.875rem;color:var(--t2)">${esc(en.archivo_nombre)}</span></div></div>` : ''}
+    ${en.tardio ? `<div style="background:var(--warn-bg);border:1px solid rgba(245,158,11,.3);padding:11px;border-radius:var(--r-md);margin-bottom:14px"><p style="font-size:.8rem;color:var(--warn);line-height:1.5">⚠️ Entrega tardía. Puedes calificar según la regla académica.</p></div>` : ''}
+    <form id="evf" onsubmit="saveEval(event,${en.codigo_entrega})">
+      <div class="form-group"><label class="form-label">Calificación * <span id="nota-disp" style="font-size:1.1rem;font-weight:900;color:var(--p400);margin-left:10px">${en.calificacion != null ? en.calificacion.toFixed(1) : '5.0'}</span></label><input type="range" id="eval-nota" min="0" max="5" step="0.1" value="${en.calificacion != null ? en.calificacion : 5}" oninput="updNota(this.value)" style="margin-top:8px"/><div style="display:flex;justify-content:space-between;font-size:.65rem;color:var(--tm);margin-top:3px"><span>0.0</span><span>1.0</span><span>2.0</span><span>3.0</span><span>4.0</span><span>5.0</span></div></div>
+      <div class="form-group"><label class="form-label">Observaciones / Retroalimentación</label><textarea id="eval-obs" class="form-control" placeholder="Escribe la retroalimentación..." style="min-height:80px">${esc(en.observaciones || '')}</textarea></div>
+    </form>`, `<button class="btn btn-secondary" onclick="closeModal('evmod')">Cancelar</button><button type="submit" form="evf" class="btn btn-primary">💾 Guardar calificación</button>`);
+    }
+    function updNota(v) { const d = document.getElementById('nota-disp'); if (!d) return; const n = parseFloat(v).toFixed(1); d.textContent = n; d.style.color = n >= 4.5 ? 'var(--ok)' : n >= 3 ? 'var(--warn)' : 'var(--danger)' }
+    function saveEval(e, entId) {
+      e.preventDefault(); const u = currentUser;
+      const nota = parseFloat(document.getElementById('eval-nota').value); const obs = document.getElementById('eval-obs').value.trim();
+      DB.evaluarEntrega(entId, nota, obs, u.codigo_profesor);
+      showToast('Calificación guardada', `Nota: ${nota.toFixed(1)}`, 'ok'); closeModal('evmod'); renderEval();
+    }
+    function openEvalSinEnt(taskId) {
+      const t = DB.getTareaById(taskId); if (!t) return;
+      openModal('evse', 'Evaluar – Sin Entrega', t.titulo, `
+    <div style="background:var(--danger-bg);border:1px solid rgba(239,68,68,.3);padding:15px;border-radius:var(--r-md);margin-bottom:18px"><div style="font-weight:800;color:var(--danger);margin-bottom:7px">⚠️ Sin entrega registrada</div><p style="font-size:.85rem;color:var(--t2);line-height:1.6">El plazo venció sin entrega. Según RB04, puedes calificar con cero o según la regla académica.</p></div>
+    <form id="evsef" onsubmit="saveEvalSinEnt(event,${taskId})">
+      <div class="form-group"><label class="form-label">Calificación <span id="nota-se-d" style="font-size:1.1rem;font-weight:900;color:var(--danger);margin-left:10px">0.0</span></label><input type="range" id="evse-nota" min="0" max="5" step="0.1" value="0" oninput="updNotaSE(this.value)" style="margin-top:8px"/></div>
+      <div class="form-group"><label class="form-label">Observaciones</label><textarea id="evse-obs" class="form-control" placeholder="Ej: No entregó dentro del plazo establecido." style="min-height:70px"></textarea></div>
+    </form>`, `<button class="btn btn-secondary" onclick="closeModal('evse')">Cancelar</button><button type="submit" form="evsef" class="btn btn-danger">📊 Registrar</button>`);
+    }
+    function updNotaSE(v) { const d = document.getElementById('nota-se-d'); if (!d) return; const n = parseFloat(v).toFixed(1); d.textContent = n; d.style.color = parseFloat(n) >= 3 ? 'var(--ok)' : 'var(--danger)' }
+    function saveEvalSinEnt(e, taskId) {
+      e.preventDefault(); const u = currentUser; const t = DB.getTareaById(taskId);
+      const nota = parseFloat(document.getElementById('evse-nota').value); const obs = document.getElementById('evse-obs').value.trim();
+      const en = DB.registrarEntrega({ codigo_tarea: taskId, tarjeta_identidad: t.responsable || '', descripcion: '[Sin entrega]', archivo_nombre: null, fecha_entrega: new Date().toISOString(), tardio: true });
+      DB.evaluarEntrega(en.codigo_entrega, nota, obs, u.codigo_profesor);
+      showToast('Calificación registrada', `Nota: ${nota.toFixed(1)} (sin entrega)`, 'wrn'); closeModal('evse'); renderEval();
+    }
+
+    // ═══════════════════════════════════════════════════
+    // PROFILE
+    // ═══════════════════════════════════════════════════
+    function renderProfile() {
+      const c = document.getElementById('profile-page'); if (!c) return;
+      const u = currentUser; const ini = initials(u.nombres, u.apellidos); const nombre = u.nombres + ' ' + u.apellidos;
+      const idLabel = isProf() ? 'Cédula' : 'Tarjeta de Identidad'; const idVal = isProf() ? u.cedula : u.tarjeta_identidad;
+      let extra = '';
+      if (isEst()) { const g = DB.getGrupoById(u.codigo_grupo); extra = `<div class="info-row"><label>Grupo</label><span>${g ? esc(g.nombre) : 'Sin asignar'}</span></div><div class="info-row"><label>Grado</label><span>${g ? g.grado : '-'}</span></div>` }
+      else { const gs = DB.get().grupos.filter(g => g.codigo_profesor === u.codigo_profesor); extra = `<div class="info-row"><label>Grupos a cargo</label><span>${gs.length}</span></div><div class="info-row"><label>Ficha</label><span>319 – ADSO</span></div>` }
+      c.innerHTML = `
+  <div class="profile-hero"><div class="avatar-lg">${ini}</div><div><div class="profile-name">${esc(nombre)}</div><div class="profile-info">${esc(u.correo)}</div><div class="profile-info">${esc(u.telefono || '')}</div><div style="margin-top:9px"><span class="rbadge ${u.tipo}">${isProf() ? '👨‍🏫 Profesor' : '🎓 Estudiante'}</span></div></div></div>
+  <div class="panel" style="margin-bottom:14px"><div class="panel-hdr"><div class="panel-title">📋 Información del perfil</div></div><div class="panel-body"><div class="info-row"><label>${idLabel}</label><span style="font-family:var(--mono);font-size:.875rem">${idVal}</span></div><div class="info-row"><label>Nombres</label><span>${esc(u.nombres)}</span></div><div class="info-row"><label>Apellidos</label><span>${esc(u.apellidos)}</span></div><div class="info-row"><label>Correo</label><span>${esc(u.correo)}</span></div><div class="info-row"><label>Teléfono</label><span>${esc(u.telefono || 'No registrado')}</span></div>${extra}</div></div>
+  <button class="btn btn-danger" onclick="doLogout()">🚪 Cerrar sesión</button>`;
+    }
+
+    // ═══════════════════════════════════════════════════
+    // REALTIME (RF13)
+    // ═══════════════════════════════════════════════════
+    function initRealtime() {
+      setInterval(() => { if (curPage === 'kanban') loadCards(); refreshBadges() }, 30000);
+    }
+
+    // ═══════════════════════════════════════════════════
+    // INIT
+    // ═══════════════════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', () => {
+      DB.init();
+      const s = DB.getSession();
+      if (s) { currentUser = s; showMain() } else showLogin();
+    });
+
+    // Mobile
+    function checkMobile() { const t = document.getElementById('menu-toggle'); if (t) t.style.display = window.innerWidth < 769 ? 'flex' : 'none' }
+    window.addEventListener('resize', checkMobile); checkMobile();
+    document.addEventListener('click', e => { const sb = document.getElementById('sidebar'); const mt = document.getElementById('menu-toggle'); if (!sb || !mt) return; if (window.innerWidth < 769 && sb.classList.contains('open')) if (!sb.contains(e.target) && !mt.contains(e.target)) sb.classList.remove('open') });
+  </script>
+</body>
+
+</html>
